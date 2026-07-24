@@ -1,4 +1,4 @@
-import ical from 'node-ical';
+—import ical from 'node-ical';
 import { getSupabaseServer } from '../../../../lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
