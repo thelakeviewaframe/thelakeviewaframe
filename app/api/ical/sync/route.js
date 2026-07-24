@@ -1,6 +1,8 @@
 import ical from 'node-ical';
 import { getSupabaseServer } from '../../../../lib/supabaseClient';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/ical/sync
 // Pulls the Airbnb + VRBO .ics feeds and writes blocked dates into Supabase.
 // Called by Vercel Cron once a day on the free plan (see vercel.json).

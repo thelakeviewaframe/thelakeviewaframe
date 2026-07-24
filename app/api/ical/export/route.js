@@ -1,6 +1,8 @@
 import { getSupabaseServer } from '../../../../lib/supabaseClient';
 import { buildIcsFeed } from '../../../../lib/ics';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/ical/export
 // Give this URL to Airbnb (Sync calendars > Import calendar) and to VRBO
 // (Calendar > Import calendars) so direct bookings block your OTA calendars.
