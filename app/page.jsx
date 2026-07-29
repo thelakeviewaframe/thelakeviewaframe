@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import BookingCard from '../components/BookingCard';
 
 // ---- PLACEHOLDER CONTENT ----
@@ -33,13 +36,50 @@ export default function HomePage() {
   const cleaningFee = Number(process.env.CLEANING_FEE_USD || 150);
   const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100);
 
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const isOpen = lightboxIndex !== null;
+
+  const close = () => setLightboxIndex(null);
+  const next = () => setLightboxIndex((i) => (i + 1) % PROPERTY.photos.length);
+  const prev = () => setLightboxIndex((i) => (i - 1 + PROPERTY.photos.length) % PROPERTY.photos.length);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowRight') next();
+      if (e.key === 'ArrowLeft') prev();
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   return (
     <main className="container">
       <div className="hero">
-        <img src={PROPERTY.photos[0]} alt={PROPERTY.name} />
+        <img
+          src={PROPERTY.photos[0]}
+          alt={PROPERTY.name}
+          onClick={() => setLightboxIndex(0)}
+          style={{ cursor: 'zoom-in' }}
+        />
         <div className="hero-side">
-          <img src={PROPERTY.photos[1]} alt="" />
-          <img src={PROPERTY.photos[2]} alt="" />
+          <img
+            src={PROPERTY.photos[1]}
+            alt=""
+            onClick={() => setLightboxIndex(1)}
+            style={{ cursor: 'zoom-in' }}
+          />
+          <img
+            src={PROPERTY.photos[2]}
+            alt=""
+            onClick={() => setLightboxIndex(2)}
+            style={{ cursor: 'zoom-in' }}
+          />
         </div>
       </div>
 
@@ -67,6 +107,98 @@ export default function HomePage() {
           propertyName={PROPERTY.name}
         />
       </div>
+
+      {isOpen && (
+        <div
+          onClick={close}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.92)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <button
+            onClick={close}
+            aria-label="Close"
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 24,
+              fontSize: 34,
+              lineHeight: 1,
+              color: '#fff',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            ×
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); prev(); }}
+            aria-label="Previous photo"
+            style={{
+              position: 'absolute',
+              left: 16,
+              fontSize: 44,
+              lineHeight: 1,
+              color: '#fff',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '10px 16px',
+            }}
+          >
+            ‹
+          </button>
+
+          <img
+            src={PROPERTY.photos[lightboxIndex]}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '92vw',
+              maxHeight: '88vh',
+              objectFit: 'contain',
+              borderRadius: 4,
+            }}
+          />
+
+          <button
+            onClick={(e) => { e.stopPropagation(); next(); }}
+            aria-label="Next photo"
+            style={{
+              position: 'absolute',
+              right: 16,
+              fontSize: 44,
+              lineHeight: 1,
+              color: '#fff',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '10px 16px',
+            }}
+          >
+            ›
+          </button>
+
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 20,
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 14,
+            }}
+          >
+            {lightboxIndex + 1} / {PROPERTY.photos.length}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
