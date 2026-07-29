@@ -3,10 +3,6 @@
 import { useState, useEffect } from 'react';
 import BookingCard from '../components/BookingCard';
 
-// ---- PLACEHOLDER CONTENT ----
-// Swap these values (and the /public photos) for the real copy, photos, and
-// amenities from your Airbnb listing. Keeping it all at the top like this
-// makes it a five-minute edit instead of hunting through the page.
 const PROPERTY = {
   name: 'Lakeview A-Frame',
   location: 'Grand Lake, Colorado',
@@ -28,6 +24,17 @@ for a mountain getaway — 10 minutes from Rocky Mountain National Park's west e
     '/photos/hero-1.jpg',
     '/photos/hero-2.jpg',
     '/photos/hero-3.jpg',
+    '/photos/hero-4.jpg',
+    '/photos/hero-5.jpg',
+    '/photos/hero-6.jpg',
+    '/photos/hero-7.jpg',
+    '/photos/hero-8.jpg',
+    '/photos/hero-9.jpg',
+    '/photos/hero-10.jpg',
+    '/photos/hero-11.jpg',
+    '/photos/hero-12.jpg',
+    '/photos/hero-13.jpg',
+    '/photos/hero-14.jpg',
   ],
 };
 
@@ -68,18 +75,8 @@ export default function HomePage() {
           style={{ cursor: 'zoom-in' }}
         />
         <div className="hero-side">
-          <img
-            src={PROPERTY.photos[1]}
-            alt=""
-            onClick={() => setLightboxIndex(1)}
-            style={{ cursor: 'zoom-in' }}
-          />
-          <img
-            src={PROPERTY.photos[2]}
-            alt=""
-            onClick={() => setLightboxIndex(2)}
-            style={{ cursor: 'zoom-in' }}
-          />
+          <img src={PROPERTY.photos[1]} alt="" onClick={() => setLightboxIndex(1)} style={{ cursor: 'zoom-in' }} />
+          <img src={PROPERTY.photos[2]} alt="" onClick={() => setLightboxIndex(2)} style={{ cursor: 'zoom-in' }} />
         </div>
       </div>
 
@@ -97,6 +94,35 @@ export default function HomePage() {
             <ul className="amenities">
               {PROPERTY.amenities.map((a) => <li key={a}>{a}</li>)}
             </ul>
+          </div>
+
+          <div className="section">
+            <h2>Photos</h2>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gap: 10,
+              }}
+            >
+              {PROPERTY.photos.map((src, i) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  onClick={() => setLightboxIndex(i)}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '3 / 2',
+                    objectFit: 'cover',
+                    borderRadius: 6,
+                    cursor: 'zoom-in',
+                    display: 'block',
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
@@ -124,17 +150,7 @@ export default function HomePage() {
           <button
             onClick={close}
             aria-label="Close"
-            style={{
-              position: 'absolute',
-              top: 20,
-              right: 24,
-              fontSize: 34,
-              lineHeight: 1,
-              color: '#fff',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-            }}
+            style={{ position: 'absolute', top: 20, right: 24, fontSize: 34, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             ×
           </button>
@@ -142,17 +158,7 @@ export default function HomePage() {
           <button
             onClick={(e) => { e.stopPropagation(); prev(); }}
             aria-label="Previous photo"
-            style={{
-              position: 'absolute',
-              left: 16,
-              fontSize: 44,
-              lineHeight: 1,
-              color: '#fff',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '10px 16px',
-            }}
+            style={{ position: 'absolute', left: 16, fontSize: 44, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px' }}
           >
             ‹
           </button>
@@ -161,40 +167,18 @@ export default function HomePage() {
             src={PROPERTY.photos[lightboxIndex]}
             alt=""
             onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '92vw',
-              maxHeight: '88vh',
-              objectFit: 'contain',
-              borderRadius: 4,
-            }}
+            style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 4 }}
           />
 
           <button
             onClick={(e) => { e.stopPropagation(); next(); }}
             aria-label="Next photo"
-            style={{
-              position: 'absolute',
-              right: 16,
-              fontSize: 44,
-              lineHeight: 1,
-              color: '#fff',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '10px 16px',
-            }}
+            style={{ position: 'absolute', right: 16, fontSize: 44, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 16px' }}
           >
             ›
           </button>
 
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 20,
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: 14,
-            }}
-          >
+          <div style={{ position: 'absolute', bottom: 20, color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
             {lightboxIndex + 1} / {PROPERTY.photos.length}
           </div>
         </div>
