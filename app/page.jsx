@@ -6,27 +6,32 @@ import BookingCard from '../components/BookingCard';
 import SiteNav from '../components/SiteNav';
 import { PROPERTY, REVIEWS } from '../lib/content';
 
-function Review({ r }) {
-  const [expanded, setExpanded] = useState(false);
-  const isLong = r.text.length > 260;
-  const shown = expanded || !isLong ? r.text : r.text.slice(0, 260).trimEnd() + '…';
+function Stars() {
+  return <span className="stars">★★★★★</span>;
+}
+
+function ReviewCard({ r, onOpen }) {
+  const isLong = r.text.length > 220;
+  const preview = isLong ? r.text.slice(0, 220).trimEnd() + '…' : r.text;
 
   return (
-    <div className="review">
-      <div className="review-head">
-        <strong>{r.name}</strong>
-        <span className="review-meta">
-          {r.place ? `${r.place} · ` : ''}{r.date} · via {r.source}
-        </span>
+    <article className="review">
+      <div className="review-top">
+        <div className="avatar">{r.name.charAt(0)}</div>
+        <div>
+          <strong>{r.name}</strong>
+          <span className="review-meta">{r.place ? `${r.place} · ` : ''}{r.date}</span>
+        </div>
       </div>
-      <div className="review-stars">{r.rating}</div>
-      {shown.split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
+      <div className="review-rating">
+        <Stars />
+        <span className="source-tag">{r.source}</span>
+      </div>
+      <p className="review-text">{preview}</p>
       {isLong && (
-        <button className="review-more" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Show less' : 'Read more'}
-        </button>
+        <button className="review-more" onClick={onOpen}>Read more</button>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -36,7 +41,7 @@ export default function HomePage() {
   const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100);
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
-  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
   const isOpen = lightboxIndex !== null;
 
   const close = () => setLightboxIndex(null);
@@ -58,8 +63,18 @@ export default function HomePage() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!reviewsOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setReviewsOpen(false); };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [reviewsOpen]);
+
   const cellStyle = { width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: 'pointer' };
-  const visibleReviews = showAllReviews ? REVIEWS : REVIEWS.slice(0, 3);
 
   return (
     <main className="container">
@@ -81,26 +96,67 @@ export default function HomePage() {
         .facts { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0 0 20px; padding: 0; list-style: none; }
         .facts li { font-size: 14px; }
         .facts b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .55; font-weight: 600; }
-        .rating-line { font-size: 15px; margin: 0 0 18px; }
-        .rating-line b { font-size: 19px; }
-        .reviews { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        @media (max-width: 767px) { .reviews { grid-template-columns: 1fr; } }
-        .review {
-          border: 1px solid rgba(0,0,0,0.12); border-radius: 10px;
-          padding: 16px 18px; font-size: 14px;
+
+        .stars { color: #c8853a; letter-spacing: 1px; font-size: 13px; }
+        .rating-summary {
+          display: flex; align-items: baseline; gap: 10px;
+          margin: 0 0 20px; flex-wrap: wrap;
         }
-        .review-head strong { display: block; font-size: 15px; }
+        .rating-summary .big { font-size: 26px; font-weight: 700; line-height: 1; }
+        .rating-summary .sub { font-size: 14px; opacity: .65; }
+
+        .reviews { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; align-items: start; }
+        @media (max-width: 900px) { .reviews { grid-template-columns: 1fr; } }
+
+        .review {
+          background: rgba(255,255,255,0.55);
+          border: 1px solid rgba(0,0,0,0.09);
+          border-radius: 14px; padding: 20px 22px;
+        }
+        .review-top { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
+        .avatar {
+          width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+          background: #2f4f3e; color: #fff; font-weight: 600; font-size: 16px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .review-top strong { display: block; font-size: 15px; line-height: 1.3; }
         .review-meta { font-size: 12.5px; opacity: .6; }
-        .review-stars { color: #2f4f3e; font-size: 13px; margin: 4px 0 8px; }
-        .review p { margin: 0 0 9px; line-height: 1.55; opacity: .85; }
+        .review-rating { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+        .source-tag {
+          font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+          opacity: .5; font-weight: 600;
+        }
+        .review-text { margin: 0 0 10px; font-size: 14.5px; line-height: 1.62; opacity: .88; }
         .review-more {
           background: none; border: none; padding: 0; cursor: pointer;
-          font-size: 13.5px; color: #2f4f3e; font-weight: 500; text-decoration: underline;
+          font-size: 13.5px; color: #2f4f3e; font-weight: 600; text-decoration: underline;
         }
         .more-reviews {
-          margin-top: 14px; background: none; border: 1px solid rgba(0,0,0,0.2);
-          border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer;
+          margin-top: 18px; background: #fff; border: 1px solid rgba(0,0,0,0.25);
+          border-radius: 9px; padding: 11px 20px; font-size: 14.5px;
+          font-weight: 500; cursor: pointer;
         }
+        .more-reviews:hover { border-color: #2f4f3e; }
+
+        .modal-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+          z-index: 9998; display: flex; align-items: center; justify-content: center;
+          padding: 20px;
+        }
+        .modal {
+          background: #faf7f2; border-radius: 16px; max-width: 720px; width: 100%;
+          max-height: 85vh; overflow-y: auto; padding: 28px 30px; position: relative;
+        }
+        @media (max-width: 767px) { .modal { padding: 22px 20px; max-height: 90vh; } }
+        .modal h2 { margin: 0 0 4px; }
+        .modal-close {
+          position: absolute; top: 16px; right: 18px; background: none; border: none;
+          font-size: 30px; line-height: 1; cursor: pointer; opacity: .6;
+        }
+        .modal .review { background: none; border: none; border-bottom: 1px solid rgba(0,0,0,0.09);
+          border-radius: 0; padding: 20px 0; }
+        .modal .review:last-child { border-bottom: none; }
+
         .teasers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
         @media (max-width: 767px) { .teasers { grid-template-columns: 1fr; } }
         .teaser {
@@ -149,19 +205,21 @@ export default function HomePage() {
 
           <div className="section">
             <h2>Guest reviews</h2>
-            <p className="rating-line">
-              <b>★ 5.0</b> · {REVIEWS.length} reviews from Airbnb and Vrbo
-            </p>
-
-            <div className="reviews">
-              {visibleReviews.map((r) => <Review key={r.name + r.date} r={r} />)}
+            <div className="rating-summary">
+              <span className="big">5.0</span>
+              <Stars />
+              <span className="sub">{REVIEWS.length} reviews · Airbnb &amp; Vrbo</span>
             </div>
 
-            {REVIEWS.length > 3 && (
-              <button className="more-reviews" onClick={() => setShowAllReviews(!showAllReviews)}>
-                {showAllReviews ? 'Show fewer reviews' : `Show all ${REVIEWS.length} reviews`}
-              </button>
-            )}
+            <div className="reviews">
+              {REVIEWS.slice(0, 4).map((r) => (
+                <ReviewCard key={r.name + r.date} r={r} onOpen={() => setReviewsOpen(true)} />
+              ))}
+            </div>
+
+            <button className="more-reviews" onClick={() => setReviewsOpen(true)}>
+              Show all {REVIEWS.length} reviews
+            </button>
           </div>
 
           <div className="section">
@@ -194,6 +252,38 @@ export default function HomePage() {
           propertyName={PROPERTY.name}
         />
       </div>
+
+      {reviewsOpen && (
+        <div className="modal-backdrop" onClick={() => setReviewsOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setReviewsOpen(false)} aria-label="Close">×</button>
+            <h2>Guest reviews</h2>
+            <div className="rating-summary">
+              <span className="big">5.0</span>
+              <Stars />
+              <span className="sub">{REVIEWS.length} reviews · Airbnb &amp; Vrbo</span>
+            </div>
+            {REVIEWS.map((r) => (
+              <article className="review" key={r.name + r.date}>
+                <div className="review-top">
+                  <div className="avatar">{r.name.charAt(0)}</div>
+                  <div>
+                    <strong>{r.name}</strong>
+                    <span className="review-meta">{r.place ? `${r.place} · ` : ''}{r.date}</span>
+                  </div>
+                </div>
+                <div className="review-rating">
+                  <Stars />
+                  <span className="source-tag">{r.source}</span>
+                </div>
+                {r.text.split('\n\n').map((para, i) => (
+                  <p className="review-text" key={i}>{para}</p>
+                ))}
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isOpen && (
         <div onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.94)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
