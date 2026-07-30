@@ -4,20 +4,31 @@ import SiteNav from '../../components/SiteNav';
 export default function AboutPage() {
   return (
     <main className="container">
+      <style>{`
+        .about-body { max-width: 640px; }
+        .about-body p { line-height: 1.65; margin-bottom: 18px; }
+        .about-photo {
+          width: 200px; height: 200px; object-fit: cover;
+          border-radius: 50%; display: block; margin: 26px 0 30px;
+        }
+        .about-cta {
+          display: inline-block; background: #2f4f3e; color: #fff;
+          padding: 12px 22px; border-radius: 8px;
+          text-decoration: none; font-size: 15px; font-weight: 500;
+        }
+        .about-cta:hover { opacity: .9; }
+        @media (max-width: 767px) {
+          .about-photo { width: 150px; height: 150px; margin: 20px 0 24px; }
+        }
+      `}</style>
+
       <SiteNav />
 
-      <h1>About us</h1>
+      <h1 style={{ marginTop: 26 }}>About us</h1>
       <p className="subtitle">Koren &amp; Jess · Your hosts</p>
 
-      <div style={{ maxWidth: 640 }}>
-        <img
-          src="/photos/hosts.jpg"
-          alt="Koren and Jess"
-          style={{
-            width: 180, height: 180, objectFit: 'cover',
-            borderRadius: '50%', display: 'block', marginBottom: 24,
-          }}
-        />
+      <div className="about-body">
+        <img className="about-photo" src="/photos/hosts.jpg" alt="Koren, Jess and family at the cabin" />
 
         <p>
           We moved to Colorado in 2018 and over the years we explored every corner of this
@@ -41,16 +52,8 @@ export default function AboutPage() {
           happy to help however we can.
         </p>
 
-        <p style={{ marginTop: 28 }}>
-          <Link
-            href="/"
-            style={{
-              display: 'inline-block', background: '#2f4f3e', color: '#fff',
-              padding: '11px 20px', borderRadius: 8, textDecoration: 'none', fontSize: 15,
-            }}
-          >
-            Check availability
-          </Link>
+        <p style={{ marginTop: 30, marginBottom: 50 }}>
+          <Link href="/" className="about-cta">Check availability</Link>
         </p>
       </div>
     </main>
