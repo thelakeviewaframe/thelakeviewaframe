@@ -4,7 +4,31 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import BookingCard from '../components/BookingCard';
 import SiteNav from '../components/SiteNav';
-import { PROPERTY } from '../lib/content';
+import { PROPERTY, REVIEWS } from '../lib/content';
+
+function Review({ r }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = r.text.length > 260;
+  const shown = expanded || !isLong ? r.text : r.text.slice(0, 260).trimEnd() + '…';
+
+  return (
+    <div className="review">
+      <div className="review-head">
+        <strong>{r.name}</strong>
+        <span className="review-meta">
+          {r.place ? `${r.place} · ` : ''}{r.date} · via {r.source}
+        </span>
+      </div>
+      <div className="review-stars">{r.rating}</div>
+      {shown.split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
+      {isLong && (
+        <button className="review-more" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const nightlyRate = Number(process.env.NIGHTLY_RATE_USD || 350);
@@ -12,6 +36,7 @@ export default function HomePage() {
   const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100);
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const isOpen = lightboxIndex !== null;
 
   const close = () => setLightboxIndex(null);
@@ -34,6 +59,7 @@ export default function HomePage() {
   }, [isOpen]);
 
   const cellStyle = { width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: 'pointer' };
+  const visibleReviews = showAllReviews ? REVIEWS : REVIEWS.slice(0, 3);
 
   return (
     <main className="container">
@@ -55,6 +81,26 @@ export default function HomePage() {
         .facts { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0 0 20px; padding: 0; list-style: none; }
         .facts li { font-size: 14px; }
         .facts b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .55; font-weight: 600; }
+        .rating-line { font-size: 15px; margin: 0 0 18px; }
+        .rating-line b { font-size: 19px; }
+        .reviews { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 767px) { .reviews { grid-template-columns: 1fr; } }
+        .review {
+          border: 1px solid rgba(0,0,0,0.12); border-radius: 10px;
+          padding: 16px 18px; font-size: 14px;
+        }
+        .review-head strong { display: block; font-size: 15px; }
+        .review-meta { font-size: 12.5px; opacity: .6; }
+        .review-stars { color: #2f4f3e; font-size: 13px; margin: 4px 0 8px; }
+        .review p { margin: 0 0 9px; line-height: 1.55; opacity: .85; }
+        .review-more {
+          background: none; border: none; padding: 0; cursor: pointer;
+          font-size: 13.5px; color: #2f4f3e; font-weight: 500; text-decoration: underline;
+        }
+        .more-reviews {
+          margin-top: 14px; background: none; border: 1px solid rgba(0,0,0,0.2);
+          border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer;
+        }
         .teasers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
         @media (max-width: 767px) { .teasers { grid-template-columns: 1fr; } }
         .teaser {
@@ -102,47 +148,5 @@ export default function HomePage() {
           </div>
 
           <div className="section">
-            <div className="teasers">
-              <Link href="/things-to-do" className="teaser">
-                <h3>Things to do</h3>
-                <p>
-                  Rocky Mountain National Park is minutes away. Boating, beaches and trails in
-                  summer; snowmobiling, Nordic skiing and sleigh rides in winter.
-                </p>
-                <span>Explore the area →</span>
-              </Link>
-
-              <Link href="/about" className="teaser">
-                <h3>About us</h3>
-                <p>
-                  We&apos;re Koren and Jess. We moved to Colorado in 2018 and kept coming back to
-                  Grand Lake until we finally bought a place of our own here.
-                </p>
-                <span>Meet your hosts →</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <BookingCard
-          nightlyRate={nightlyRate}
-          cleaningFee={cleaningFee}
-          depositPercent={depositPercent}
-          propertyName={PROPERTY.name}
-        />
-      </div>
-
-      {isOpen && (
-        <div onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.94)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <button onClick={close} aria-label="Close" style={{ position: 'absolute', top: 16, right: 20, fontSize: 34, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', zIndex: 2 }}>×</button>
-          <button onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous photo" style={{ position: 'absolute', left: 6, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', zIndex: 2 }}>‹</button>
-          <img src={PROPERTY.photos[lightboxIndex]} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '92vw', maxHeight: '86vh', objectFit: 'contain', borderRadius: 4 }} />
-          <button onClick={(e) => { e.stopPropagation(); next(); }} aria-label="Next photo" style={{ position: 'absolute', right: 6, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', zIndex: 2 }}>›</button>
-          <div style={{ position: 'absolute', bottom: 16, color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
-            {lightboxIndex + 1} / {PROPERTY.photos.length}
-          </div>
-        </div>
-      )}
-    </main>
-  );
-}
+            <h2>Guest reviews</h2>
+            <p
