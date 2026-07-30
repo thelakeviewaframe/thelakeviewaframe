@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BookingCard from '../components/BookingCard';
 
 const PROPERTY = {
@@ -44,6 +44,8 @@ export default function HomePage() {
   const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100);
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [current, setCurrent] = useState(0);
+  const trackRef = useRef(null);
   const isOpen = lightboxIndex !== null;
 
   const close = () => setLightboxIndex(null);
@@ -64,6 +66,19 @@ export default function HomePage() {
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  const scrollTo = (i) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const clamped = Math.max(0, Math.min(i, PROPERTY.photos.length - 1));
+    track.scrollTo({ left: clamped * track.clientWidth, behavior: 'smooth' });
+  };
+
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    setCurrent(Math.round(track.scrollLeft / track.clientWidth));
+  };
 
   return (
     <main className="container">
@@ -98,27 +113,91 @@ export default function HomePage() {
 
           <div className="section">
             <h2>Photos</h2>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                gap: 10,
-              }}
-            >
-              {PROPERTY.photos.map((src, i) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt=""
-                  loading="lazy"
-                  onClick={() => setLightboxIndex(i)}
+
+            <div style={{ position: 'relative' }}>
+              <div
+                ref={trackRef}
+                onScroll={onScroll}
+                style={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  scrollSnapType: 'x mandatory',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  borderRadius: 8,
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {PROPERTY.photos.map((src, i) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt=""
+                    loading={i < 2 ? 'eager' : 'lazy'}
+                    onClick={() => setLightboxIndex(i)}
+                    style={{
+                      flex: '0 0 100%',
+                      width: '100%',
+                      aspectRatio: '3 / 2',
+                      objectFit: 'cover',
+                      scrollSnapAlign: 'start',
+                      cursor: 'zoom-in',
+                      display: 'block',
+                    }}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={() => scrollTo(current - 1)}
+                aria-label="Previous"
+                style={{
+                  position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+                  width: 36, height: 36, borderRadius: '50%', border: 'none',
+                  background: 'rgba(255,255,255,0.9)', cursor: 'pointer',
+                  fontSize: 20, lineHeight: 1, display: current === 0 ? 'none' : 'block',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                }}
+              >
+                ‹
+              </button>
+
+              <button
+                onClick={() => scrollTo(current + 1)}
+                aria-label="Next"
+                style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  width: 36, height: 36, borderRadius: '50%', border: 'none',
+                  background: 'rgba(255,255,255,0.9)', cursor: 'pointer',
+                  fontSize: 20, lineHeight: 1,
+                  display: current >= PROPERTY.photos.length - 1 ? 'none' : 'block',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                }}
+              >
+                ›
+              </button>
+
+              <div
+                style={{
+                  position: 'absolute', bottom: 10, right: 12,
+                  background: 'rgba(0,0,0,0.6)', color: '#fff',
+                  fontSize: 12, padding: '3px 8px', borderRadius: 12,
+                }}
+              >
+                {current + 1} / {PROPERTY.photos.length}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+              {PROPERTY.photos.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => scrollTo(i)}
+                  aria-label={`Photo ${i + 1}`}
                   style={{
-                    width: '100%',
-                    aspectRatio: '3 / 2',
-                    objectFit: 'cover',
-                    borderRadius: 6,
-                    cursor: 'zoom-in',
-                    display: 'block',
+                    width: 7, height: 7, borderRadius: '50%', border: 'none', padding: 0,
+                    cursor: 'pointer',
+                    background: i === current ? '#2f4f3e' : 'rgba(0,0,0,0.2)',
                   }}
                 />
               ))}
@@ -138,13 +217,8 @@ export default function HomePage() {
         <div
           onClick={close}
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.92)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)',
+            zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           <button
