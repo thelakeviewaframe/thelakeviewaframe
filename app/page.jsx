@@ -1,131 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import BookingCard from '../components/BookingCard';
-
-const PROPERTY = {
-  name: 'Lakeview A-Frame',
-  location: 'Grand Lake, Colorado',
-  tagline: 'A luxury mountain retreat designed for gathering, relaxing, and making memories.',
-  description: `Welcome to our Grand Lake A-frame. Sip your morning coffee in the sun-filled great room,
-unwind with an evening glass of wine in the hot tub beneath the stars, and look for moose and wildlife.
-Just minutes from Grand Lake and Rocky Mountain National Park, this thoughtfully designed home offers
-the perfect blend of adventure, comfort, and modern mountain charm.
-
-Enjoy the fully equipped kitchen, coffee and tea station, and dry bar for crafting your favorite evening
-drinks. Dine inside or al fresco on the deck while taking in the fresh mountain air. Get comfy in the
-upstairs reading nook for quiet moments of relaxation.`,
-  quickFacts: [
-    ['Sleeps', '8 guests'],
-    ['Layout', '3 bedrooms · 2 bathrooms'],
-    ['Check-in', '4:00 PM'],
-    ['Check-out', '11:00 AM'],
-  ],
-  amenities: [
-    'Lake access & private dock',
-    'Hot tub',
-    'Wood-burning fireplace',
-    'Full kitchen',
-    'Free WiFi',
-    'Washer & dryer',
-    'Parking for 2 cars',
-    'Pet friendly',
-    'Private hot tub',
-    'Coffee & tea station',
-    'Dry bar',
-    'Deck dining, al fresco',
-    'Upstairs reading nook',
-    'Sleeps 8 · 3 bed / 2 bath',
-  ],
-  photos: [
-    '/photos/hero-1.jpg', '/photos/hero-2.jpg', '/photos/hero-3.jpg',
-    '/photos/hero-4.jpg', '/photos/hero-5.jpg', '/photos/hero-6.jpg',
-    '/photos/hero-7.jpg', '/photos/hero-8.jpg', '/photos/hero-9.jpg',
-    '/photos/hero-10.jpg', '/photos/hero-11.jpg', '/photos/hero-12.jpg',
-    '/photos/hero-13.jpg', '/photos/hero-14.jpg',
-  ],
-};
-
-const SEASONS = [
-  {
-    season: 'Spring & Summer',
-    groups: [
-      {
-        title: 'Rocky Mountain National Park',
-        items: [
-          ['Via Trail Ridge Road', "Just minutes away. Breathtaking alpine scenery, abundant wildlife, scenic drives, and endless hiking."],
-        ],
-      },
-      {
-        title: 'Boating the three lakes',
-        items: [
-          ['Trail Ridge Marina', 'Very close to the house.'],
-          ['Grand Lake Marina & Boater\u2019s Choice', 'Rent pontoon boats, kayaks, paddle boats and canoes to explore Grand Lake, Lake Granby and Shadow Mountain Lake.'],
-        ],
-      },
-      {
-        title: 'Beaches',
-        items: [
-          ['Pine Beach Picnic Site', 'The closest one.'],
-          ['Surprise Beach', 'On Lake Granby.'],
-          ['Grand Lake Town Beach & Dock', 'Sandy shore just off the boardwalk.'],
-        ],
-      },
-      {
-        title: 'Mountain biking',
-        items: [
-          ['Trestle Bike Park', 'One of the premier downhill destinations in North America \u2014 over 40 miles of lift-served trails, from beginner flow to expert downhill.'],
-        ],
-      },
-      {
-        title: 'More to do',
-        items: [
-          ['Stroll Grand Avenue', "Local shops, an ice cream cone, a patio lunch, and the charm of Grand Lake's historic boardwalk."],
-          ['Grand Lake Golf Course', ''],
-          ['Fishing', ''],
-          ['Whitewater rafting', ''],
-          ['Grand Adventure Balloon Tours', ''],
-          ['Granby and Fraser rodeos', ''],
-        ],
-      },
-    ],
-  },
-  {
-    season: 'Fall & Winter',
-    groups: [
-      {
-        title: 'Rocky Mountain National Park',
-        items: [
-          ['Trail Ridge Road, partial access', 'Weather permitting, you can drive the first 10\u201312 miles from the Grand Lake entrance before the road closes at the Colorado River Trailhead \u2014 passing Kawuneeche Valley, Farview Curve Overlook and the Colorado River Trailhead.'],
-        ],
-      },
-      {
-        title: 'Snowmobiling',
-        items: [
-          ['The Snowmobiling Capital of Colorado', 'Unforgettable winter riding for all experience levels, across miles of scenic forest trails with stunning mountain views.'],
-        ],
-      },
-      {
-        title: 'Skiing',
-        items: [
-          ['Winter Park Ski Resort', '34 miles away \u2014 our favorite local resort and town.'],
-          ['Steamboat Ski Resort', '90 miles to Steamboat Springs.'],
-          ['Grand Lake Nordic Center', 'Roughly 35 km of groomed trails for classic and skate skiing, plus a free tubing hill.'],
-        ],
-      },
-      {
-        title: 'In town',
-        items: [
-          ['Grand Lake Town Park Ice Rink', '1028 Grand Ave, Grand Lake.'],
-          ['Stroll historic downtown Grand Lake', ''],
-          ['Sleigh rides', ''],
-          ['Ice fishing', ''],
-          ['Snowshoeing', ''],
-        ],
-      },
-    ],
-  },
-];
+import SiteNav from '../components/SiteNav';
+import { PROPERTY } from '../lib/content';
 
 export default function HomePage() {
   const nightlyRate = Number(process.env.NIGHTLY_RATE_USD || 350);
@@ -133,7 +12,6 @@ export default function HomePage() {
   const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100);
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
-  const [season, setSeason] = useState(0);
   const isOpen = lightboxIndex !== null;
 
   const close = () => setLightboxIndex(null);
@@ -163,7 +41,7 @@ export default function HomePage() {
         .photo-grid {
           position: relative; display: grid;
           grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr;
-          gap: 8px; height: 440px; margin-bottom: 20px;
+          gap: 8px; height: 440px; margin-bottom: 22px;
           border-radius: 12px; overflow: hidden;
         }
         .photo-grid .main { grid-row: 1 / 3; }
@@ -174,26 +52,23 @@ export default function HomePage() {
           font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 5px rgba(0,0,0,0.22);
         }
         @media (max-width: 767px) { .show-all-btn { bottom: 10px; right: 10px; padding: 7px 11px; font-size: 13px; } }
-        .facts { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 0 0 18px; padding: 0; list-style: none; }
+        .facts { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0 0 20px; padding: 0; list-style: none; }
         .facts li { font-size: 14px; }
         .facts b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .55; font-weight: 600; }
-        .season-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-        .season-tabs button {
-          border: 1px solid rgba(0,0,0,0.15); background: transparent;
-          padding: 7px 15px; border-radius: 20px; font-size: 14px; cursor: pointer;
+        .teasers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+        @media (max-width: 767px) { .teasers { grid-template-columns: 1fr; } }
+        .teaser {
+          display: block; text-decoration: none; color: inherit;
+          border: 1px solid rgba(0,0,0,0.13); border-radius: 10px;
+          padding: 18px 20px; transition: border-color .15s;
         }
-        .season-tabs button[data-on="1"] { background: #2f4f3e; color: #fff; border-color: #2f4f3e; }
-        .ttd-group { margin-bottom: 24px; }
-        .ttd-group h3 { margin: 0 0 8px; font-size: 16px; }
-        .ttd-item { padding: 8px 0; border-top: 1px solid rgba(0,0,0,0.08); }
-        .ttd-item strong { display: block; font-weight: 600; }
-        .ttd-item span { font-size: 14px; opacity: .78; line-height: 1.5; }
-        .ttd-note {
-          background: rgba(47,79,62,0.07); border-left: 3px solid #2f4f3e;
-          padding: 12px 15px; border-radius: 5px; font-size: 14px; line-height: 1.55;
-        }
-        .ttd-note strong { display: block; margin-bottom: 4px; }
+        .teaser:hover { border-color: #2f4f3e; }
+        .teaser h3 { margin: 0 0 6px; font-size: 16px; }
+        .teaser p { margin: 0 0 10px; font-size: 14px; opacity: .75; line-height: 1.5; }
+        .teaser span { font-size: 14px; color: #2f4f3e; font-weight: 500; }
       `}</style>
+
+      <SiteNav />
 
       <div className="photo-grid">
         <img className="main" src={PROPERTY.photos[0]} alt={PROPERTY.name} onClick={() => setLightboxIndex(0)} style={cellStyle} />
@@ -227,35 +102,24 @@ export default function HomePage() {
           </div>
 
           <div className="section">
-            <h2>Things to do and see</h2>
+            <div className="teasers">
+              <Link href="/things-to-do" className="teaser">
+                <h3>Things to do</h3>
+                <p>
+                  Rocky Mountain National Park is minutes away. Boating, beaches and trails in
+                  summer; snowmobiling, Nordic skiing and sleigh rides in winter.
+                </p>
+                <span>Explore the area →</span>
+              </Link>
 
-            <div className="season-tabs">
-              {SEASONS.map((s, i) => (
-                <button key={s.season} data-on={season === i ? '1' : '0'} onClick={() => setSeason(i)}>
-                  {s.season}
-                </button>
-              ))}
-            </div>
-
-            {SEASONS[season].groups.map((group) => (
-              <div className="ttd-group" key={group.title}>
-                <h3>{group.title}</h3>
-                {group.items.map(([name, detail]) => (
-                  <div className="ttd-item" key={name}>
-                    <strong>{name}</strong>
-                    {detail ? <span>{detail}</span> : null}
-                  </div>
-                ))}
-              </div>
-            ))}
-
-            <div className="ttd-note">
-              <strong>Before you go: park reservations</strong>
-              From May 22 through October 12, 2026, Rocky Mountain National Park requires a timed
-              entry reservation to enter between 9 a.m. and 2 p.m. You can enter before 9 a.m. or
-              after 2 p.m. without one. Reservations open on Recreation.gov on the 1st of each month
-              at 8 a.m. MDT for the following month, with more released at 7 p.m. the night before.
-              A park pass is required separately.
+              <Link href="/about" className="teaser">
+                <h3>About us</h3>
+                <p>
+                  We&apos;re Koren and Jess. We moved to Colorado in 2018 and kept coming back to
+                  Grand Lake until we finally bought a place of our own here.
+                </p>
+                <span>Meet your hosts →</span>
+              </Link>
             </div>
           </div>
         </div>
