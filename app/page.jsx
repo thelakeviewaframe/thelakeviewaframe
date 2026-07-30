@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import BookingCard from '../components/BookingCard';
 
 const PROPERTY = {
@@ -44,24 +44,11 @@ export default function HomePage() {
   const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100);
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
-  const [current, setCurrent] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const trackRef = useRef(null);
   const isOpen = lightboxIndex !== null;
 
   const close = () => setLightboxIndex(null);
   const next = () => setLightboxIndex((i) => (i + 1) % PROPERTY.photos.length);
   const prev = () => setLightboxIndex((i) => (i - 1 + PROPERTY.photos.length) % PROPERTY.photos.length);
-
-  useEffect(() => {
-    setMounted(true);
-    const mq = window.matchMedia('(max-width: 767px)');
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -78,106 +65,74 @@ export default function HomePage() {
     };
   }, [isOpen]);
 
-  const onScroll = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    setCurrent(Math.round(track.scrollLeft / track.clientWidth));
+  const cellStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
+    cursor: 'pointer',
   };
-
-  const showAll = () => setLightboxIndex(0);
 
   return (
     <main className="container">
-      {mounted && isMobile ? (
-        <div style={{ position: 'relative', marginBottom: 18 }}>
-          <div
-            ref={trackRef}
-            onScroll={onScroll}
-            style={{
-              display: 'flex',
-              overflowX: 'auto',
-              scrollSnapType: 'x mandatory',
-              scrollbarWidth: 'none',
-              borderRadius: 10,
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            {PROPERTY.photos.map((src, i) => (
-              <img
-                key={src}
-                src={src}
-                alt=""
-                loading={i < 2 ? 'eager' : 'lazy'}
-                onClick={() => setLightboxIndex(i)}
-                style={{
-                  flex: '0 0 100%',
-                  width: '100%',
-                  aspectRatio: '4 / 3',
-                  objectFit: 'cover',
-                  scrollSnapAlign: 'start',
-                  display: 'block',
-                }}
-              />
-            ))}
-          </div>
+      <style>{`
+        .photo-grid {
+          position: relative;
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          grid-template-rows: 1fr 1fr;
+          gap: 8px;
+          height: 440px;
+          margin-bottom: 20px;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        .photo-grid .main { grid-row: 1 / 3; }
+        @media (max-width: 767px) {
+          .photo-grid {
+            height: 300px;
+            gap: 5px;
+            border-radius: 10px;
+          }
+        }
+        .show-all-btn {
+          position: absolute;
+          bottom: 14px;
+          right: 14px;
+          background: #fff;
+          border: 1px solid rgba(0,0,0,0.2);
+          border-radius: 8px;
+          padding: 8px 14px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          box-shadow: 0 1px 5px rgba(0,0,0,0.22);
+        }
+        @media (max-width: 767px) {
+          .show-all-btn {
+            bottom: 10px;
+            right: 10px;
+            padding: 7px 11px;
+            font-size: 13px;
+          }
+        }
+      `}</style>
 
-          <div
-            style={{
-              position: 'absolute', bottom: 10, right: 12,
-              background: 'rgba(0,0,0,0.6)', color: '#fff',
-              fontSize: 12, padding: '3px 9px', borderRadius: 12,
-            }}
-          >
-            {current + 1} / {PROPERTY.photos.length}
-          </div>
-        </div>
-      ) : (
-        <div
-          style={{
-            position: 'relative',
-            display: 'grid',
-            gridTemplateColumns: '2fr 1fr',
-            gridTemplateRows: '1fr 1fr',
-            gap: 8,
-            height: 440,
-            marginBottom: 18,
-            borderRadius: 10,
-            overflow: 'hidden',
-          }}
-        >
-          <img
-            src={PROPERTY.photos[0]}
-            alt={PROPERTY.name}
-            onClick={() => setLightboxIndex(0)}
-            style={{ gridRow: '1 / 3', width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }}
-          />
-          <img
-            src={PROPERTY.photos[1]}
-            alt=""
-            onClick={() => setLightboxIndex(1)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }}
-          />
-          <img
-            src={PROPERTY.photos[2]}
-            alt=""
-            onClick={() => setLightboxIndex(2)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }}
-          />
+      <div className="photo-grid">
+        <img
+          className="main"
+          src={PROPERTY.photos[0]}
+          alt={PROPERTY.name}
+          onClick={() => setLightboxIndex(0)}
+          style={cellStyle}
+        />
+        <img src={PROPERTY.photos[1]} alt="" onClick={() => setLightboxIndex(1)} style={cellStyle} />
+        <img src={PROPERTY.photos[2]} alt="" onClick={() => setLightboxIndex(2)} style={cellStyle} />
 
-          <button
-            onClick={showAll}
-            style={{
-              position: 'absolute', bottom: 14, right: 14,
-              background: '#fff', border: '1px solid rgba(0,0,0,0.2)',
-              borderRadius: 8, padding: '8px 14px', fontSize: 14,
-              cursor: 'pointer', fontWeight: 500,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-            }}
-          >
-            Show all {PROPERTY.photos.length} photos
-          </button>
-        </div>
-      )}
+        <button className="show-all-btn" onClick={() => setLightboxIndex(0)}>
+          Ver las {PROPERTY.photos.length} fotos
+        </button>
+      </div>
 
       <h1>{PROPERTY.name}</h1>
       <p className="subtitle">{PROPERTY.location} · {PROPERTY.tagline}</p>
@@ -214,16 +169,16 @@ export default function HomePage() {
         >
           <button
             onClick={close}
-            aria-label="Close"
-            style={{ position: 'absolute', top: 18, right: 22, fontSize: 34, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', zIndex: 2 }}
+            aria-label="Cerrar"
+            style={{ position: 'absolute', top: 16, right: 20, fontSize: 34, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', zIndex: 2 }}
           >
             ×
           </button>
 
           <button
             onClick={(e) => { e.stopPropagation(); prev(); }}
-            aria-label="Previous photo"
-            style={{ position: 'absolute', left: 10, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 14px', zIndex: 2 }}
+            aria-label="Foto anterior"
+            style={{ position: 'absolute', left: 6, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', zIndex: 2 }}
           >
             ‹
           </button>
@@ -237,13 +192,13 @@ export default function HomePage() {
 
           <button
             onClick={(e) => { e.stopPropagation(); next(); }}
-            aria-label="Next photo"
-            style={{ position: 'absolute', right: 10, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 14px', zIndex: 2 }}
+            aria-label="Foto siguiente"
+            style={{ position: 'absolute', right: 6, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', zIndex: 2 }}
           >
             ›
           </button>
 
-          <div style={{ position: 'absolute', bottom: 18, color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
+          <div style={{ position: 'absolute', bottom: 16, color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
             {lightboxIndex + 1} / {PROPERTY.photos.length}
           </div>
         </div>
