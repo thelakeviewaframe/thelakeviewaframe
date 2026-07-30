@@ -149,4 +149,63 @@ export default function HomePage() {
 
           <div className="section">
             <h2>Guest reviews</h2>
-            <p
+            <p className="rating-line">
+              <b>★ 5.0</b> · {REVIEWS.length} reviews from Airbnb and Vrbo
+            </p>
+
+            <div className="reviews">
+              {visibleReviews.map((r) => <Review key={r.name + r.date} r={r} />)}
+            </div>
+
+            {REVIEWS.length > 3 && (
+              <button className="more-reviews" onClick={() => setShowAllReviews(!showAllReviews)}>
+                {showAllReviews ? 'Show fewer reviews' : `Show all ${REVIEWS.length} reviews`}
+              </button>
+            )}
+          </div>
+
+          <div className="section">
+            <div className="teasers">
+              <Link href="/things-to-do" className="teaser">
+                <h3>Things to do</h3>
+                <p>
+                  Rocky Mountain National Park is minutes away. Boating, beaches and trails in
+                  summer; snowmobiling, Nordic skiing and sleigh rides in winter.
+                </p>
+                <span>Explore the area →</span>
+              </Link>
+
+              <Link href="/about" className="teaser">
+                <h3>About us</h3>
+                <p>
+                  We&apos;re Koren and Jess. We moved to Colorado in 2018 and kept coming back to
+                  Grand Lake until we finally bought a place of our own here.
+                </p>
+                <span>Meet your hosts →</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <BookingCard
+          nightlyRate={nightlyRate}
+          cleaningFee={cleaningFee}
+          depositPercent={depositPercent}
+          propertyName={PROPERTY.name}
+        />
+      </div>
+
+      {isOpen && (
+        <div onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.94)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={close} aria-label="Close" style={{ position: 'absolute', top: 16, right: 20, fontSize: 34, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', zIndex: 2 }}>×</button>
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous photo" style={{ position: 'absolute', left: 6, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', zIndex: 2 }}>‹</button>
+          <img src={PROPERTY.photos[lightboxIndex]} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '92vw', maxHeight: '86vh', objectFit: 'contain', borderRadius: 4 }} />
+          <button onClick={(e) => { e.stopPropagation(); next(); }} aria-label="Next photo" style={{ position: 'absolute', right: 6, fontSize: 42, lineHeight: 1, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', zIndex: 2 }}>›</button>
+          <div style={{ position: 'absolute', bottom: 16, color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
+            {lightboxIndex + 1} / {PROPERTY.photos.length}
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
