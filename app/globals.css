@@ -103,7 +103,10 @@ a { color: var(--gold); }
 
 button { font-family: inherit; }
 
-input, select, textarea {
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+textarea {
   font-family: inherit;
   font-size: 15px;
   color: var(--text);
