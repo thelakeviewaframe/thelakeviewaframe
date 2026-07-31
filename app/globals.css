@@ -210,4 +210,32 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: center;
 }
-.cal-nav-btn:
+.cal-nav-btn:hover { border-color: var(--gold); }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.cal-day {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s;
+}
+.cal-day:hover:not(.blocked):not(.empty) { background: var(--gold-soft); }
+.cal-day.empty { cursor: default; }
+.cal-day.blocked {
+  color: #c4c4c4;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.cal-day.selected { background: var(--gold); color: #fff; font-weight: 600; }
+.cal-day.in-range { background: var(--gold-soft); }
