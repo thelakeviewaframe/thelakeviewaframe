@@ -49,7 +49,7 @@ export default function ThingsToDoPage() {
 
         .ttd-carousel {
           position: relative; overflow: hidden;
-          border-radius: 4px; margin: 14px 0 30px;
+          border-radius: 4px; margin: 14px 0 30px; max-width: 780px;
           background: rgba(0,0,0,0.05);
         }
         .ttd-track { display: flex; transition: transform .45s ease; }
