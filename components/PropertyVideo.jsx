@@ -1,54 +1,17 @@
 export default function PropertyVideo() {
   return (
-    <section className="lv-video-section">
-      <style dangerouslySetInnerHTML={{ __html: `
-        .lv-video-section {
-          padding: 72px 20px;
-        }
-        .lv-video-inner {
-          max-width: 1000px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 36px;
-        }
-        .lv-video-copy {
-          text-align: center;
-          max-width: 460px;
-        }
-        .lv-video-eyebrow {
-          display: block;
-          color: #bb8e65;
-          font-size: 13px;
-          letter-spacing: 2px;
-          text-transform: uppercase;
-          margin-bottom: 12px;
-        }
-        .lv-video-copy h2 {
-          color: #545454;
-          font-size: 34px;
-          line-height: 1.2;
-          margin: 0 0 16px;
-          font-weight: 500;
-        }
-        .lv-video-copy p {
-          color: #545454;
-          font-size: 17px;
-          line-height: 1.7;
-          margin: 0;
-          opacity: 0.85;
-        }
+    <div className="section">
+      <style>{`
         .lv-video-frame {
           position: relative;
           width: 100%;
-          max-width: 320px;
+          max-width: 300px;
+          margin: 0 auto;
           aspect-ratio: 9 / 16;
-          border-radius: 20px;
+          border-radius: 3px;
           overflow: hidden;
           background: #000;
-          box-shadow: 0 14px 40px rgba(84, 84, 84, 0.22);
-          flex-shrink: 0;
+          box-shadow: 0 6px 28px rgba(84, 84, 84, 0.18);
         }
         .lv-video-frame iframe {
           position: absolute;
@@ -58,38 +21,32 @@ export default function PropertyVideo() {
           height: 100%;
           border: 0;
         }
-        @media (min-width: 900px) {
-          .lv-video-inner {
-            flex-direction: row;
-            justify-content: center;
-            align-items: center;
-            gap: 64px;
-          }
-          .lv-video-copy {
-            text-align: left;
-          }
+        .lv-video-caption {
+          max-width: 400px;
+          margin: 16px auto 0;
+          text-align: center;
+          font-size: 13.5px;
+          line-height: 1.7;
+          color: #9a9a9a;
         }
-      ` }} />
-      <div className="lv-video-inner">
-        <div className="lv-video-copy">
-          <span className="lv-video-eyebrow">Video Tour</span>
-          <h2>Step inside the A-Frame</h2>
-          <p>
-            Soaring wood ceilings, accordion doors that open to the deck, and a
-            private hot tub under the pines &mdash; eight minutes from the west
-            entrance of Rocky Mountain National Park.
-          </p>
-        </div>
-        <div className="lv-video-frame">
-          <iframe
-            src="https://www.youtube.com/embed/uhVNr1dka6g?rel=0&playsinline=1"
-            title="The Lakeview A-Frame video tour"
-            loading="lazy"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        </div>
+      `}</style>
+
+      <h2>Video Tour</h2>
+
+      <div className="lv-video-frame">
+        <iframe
+          src="https://www.youtube.com/embed/uhVNr1dka6g?rel=0&playsinline=1"
+          title="The Lakeview A-Frame video tour"
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
       </div>
-    </section>
+
+      <p className="lv-video-caption">
+        A walk through the A-Frame &mdash; vaulted wood ceilings, accordion doors
+        onto the deck, and the hot tub under the pines.
+      </p>
+    </div>
   );
 }
