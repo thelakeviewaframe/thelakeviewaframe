@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -25,31 +25,13 @@ export default function ThingsToDoPage() {
   return (
     <main className="container">
       <style>{`
-        .season-tabs { display: flex; gap: 8px; margin: 6px 0 24px; }
-        .season-tabs button {
-          border: 1px solid rgba(0,0,0,0.15); background: transparent;
-          padding: 7px 15px; border-radius: 20px; font-size: 14px; cursor: pointer;
-        }
-        .season-tabs button[data-on="1"] { background: #2f4f3e; color: #fff; border-color: #2f4f3e; }
-        .ttd-group { margin-bottom: 26px; }
-        .ttd-group h3 { margin: 0 0 8px; font-size: 17px; }
-        .ttd-item { padding: 8px 0; border-top: 1px solid rgba(0,0,0,0.08); }
-        .ttd-item strong { display: block; font-weight: 600; }
-        .ttd-item span { font-size: 14px; opacity: .78; line-height: 1.5; }
-        .ttd-note {
-          background: rgba(47,79,62,0.07); border-left: 3px solid #2f4f3e;
-          padding: 12px 15px; border-radius: 5px; font-size: 14px; line-height: 1.55;
-          margin-bottom: 28px;
-        }
-        .ttd-note strong { display: block; margin-bottom: 4px; }
-        .back-cta {
-          display: inline-block; background: #2f4f3e; color: #fff;
-          padding: 11px 20px; border-radius: 8px; text-decoration: none; font-size: 15px;
+        .ttd-carousel, .season-tabs, .ttd-group, .ttd-note, .ttd-foot {
+          max-width: 780px;
         }
 
         .ttd-carousel {
           position: relative; overflow: hidden;
-          border-radius: 4px; margin: 14px 0 30px; max-width: 780px;
+          border-radius: 4px; margin: 18px 0 34px;
           background: rgba(0,0,0,0.05);
         }
         .ttd-track { display: flex; transition: transform .45s ease; }
@@ -76,6 +58,38 @@ export default function ThingsToDoPage() {
           border: none; cursor: pointer; background: rgba(255,255,255,0.55);
         }
         .ttd-dots button[data-on="1"] { background: #fff; }
+
+        .season-tabs { display: flex; gap: 8px; margin: 0 0 34px; }
+        .season-tabs button {
+          border: 1px solid rgba(0,0,0,0.15); background: transparent;
+          padding: 7px 15px; border-radius: 20px; font-size: 14px; cursor: pointer;
+        }
+        .season-tabs button[data-on="1"] { background: #2f4f3e; color: #fff; border-color: #2f4f3e; }
+
+        .ttd-group { margin-bottom: 34px; }
+        .ttd-group h3 {
+          margin: 0 0 2px; font-size: 12px; font-weight: 600;
+          text-transform: uppercase; letter-spacing: .16em; color: #2f4f3e;
+        }
+        .ttd-item { padding: 13px 0; border-top: 1px solid rgba(0,0,0,0.09); }
+        .ttd-item strong {
+          display: block; font-weight: 600; font-size: 16px;
+          line-height: 1.35; margin-bottom: 2px;
+        }
+        .ttd-item span { font-size: 14.5px; opacity: .72; line-height: 1.6; }
+
+        .ttd-note {
+          background: rgba(47,79,62,0.07); border-left: 3px solid #2f4f3e;
+          padding: 15px 18px; border-radius: 5px; font-size: 14px; line-height: 1.6;
+          margin-bottom: 30px;
+        }
+        .ttd-note strong { display: block; margin-bottom: 5px; }
+        .ttd-foot { margin-bottom: 48px; }
+        .back-cta {
+          display: inline-block; background: #2f4f3e; color: #fff;
+          padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 15px;
+        }
+
         @media (max-width: 767px) {
           .ttd-arrow { width: 34px; height: 34px; font-size: 21px; }
           .ttd-arrow.left { left: 8px; }
@@ -137,7 +151,7 @@ export default function ThingsToDoPage() {
         A park pass is required separately.
       </div>
 
-      <p style={{ marginBottom: 40 }}>
+      <p className="ttd-foot">
         <Link href="/" className="back-cta">Check availability</Link>
       </p>
     </main>
