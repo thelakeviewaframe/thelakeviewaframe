@@ -5,6 +5,28 @@ import Link from 'next/link';
 import SiteNav from '../../components/SiteNav';
 import { SEASONS } from '../../lib/content';
 
+const GROUP_PHOTOS = {
+  'Rocky Mountain National Park': {
+    src: '/photos/rmnp-peaks.jpg',
+    alt: 'Snow-lined peaks and pine forest in Rocky Mountain National Park',
+    caption: 'The west entrance is about eight minutes from the house.',
+  },
+  'Boating the three lakes': {
+    src: '/photos/grand-lake-marina.jpg',
+    alt: 'Boat rental docks on Grand Lake with mountains behind',
+    caption: 'Boat rentals on Grand Lake.',
+  },
+  'Beaches': {
+    src: '/photos/grand-lake-docks.jpg',
+    alt: 'Wooden docks along the shore of Grand Lake',
+  },
+  'More to do': {
+    src: '/photos/marina-sunset.jpg',
+    alt: 'Boats moored at the marina at sunset',
+    caption: 'Evening light over the marina.',
+  },
+};
+
 export default function ThingsToDoPage() {
   const [season, setSeason] = useState(0);
 
@@ -32,6 +54,20 @@ export default function ThingsToDoPage() {
           display: inline-block; background: #2f4f3e; color: #fff;
           padding: 11px 20px; border-radius: 8px; text-decoration: none; font-size: 15px;
         }
+
+        .ttd-figure { margin: 0 0 14px; }
+        .ttd-figure img {
+          display: block; width: 100%; height: auto;
+          aspect-ratio: 16 / 9; object-fit: cover;
+          border-radius: 4px; background: rgba(0,0,0,0.05);
+        }
+        .ttd-figure figcaption {
+          margin-top: 7px; font-size: 13px; line-height: 1.5;
+          opacity: .62;
+        }
+        @media (max-width: 767px) {
+          .ttd-figure img { aspect-ratio: 4 / 3; }
+        }
       `}</style>
 
       <SiteNav />
@@ -47,17 +83,26 @@ export default function ThingsToDoPage() {
         ))}
       </div>
 
-      {SEASONS[season].groups.map((group) => (
-        <div className="ttd-group" key={group.title}>
-          <h3>{group.title}</h3>
-          {group.items.map(([name, detail]) => (
-            <div className="ttd-item" key={name}>
-              <strong>{name}</strong>
-              {detail ? <span>{detail}</span> : null}
-            </div>
-          ))}
-        </div>
-      ))}
+      {SEASONS[season].groups.map((group) => {
+        const photo = GROUP_PHOTOS[group.title];
+        return (
+          <div className="ttd-group" key={group.title}>
+            <h3>{group.title}</h3>
+            {photo ? (
+              <figure className="ttd-figure">
+                <img src={photo.src} alt={photo.alt} loading="lazy" />
+                {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
+              </figure>
+            ) : null}
+            {group.items.map(([name, detail]) => (
+              <div className="ttd-item" key={name}>
+                <strong>{name}</strong>
+                {detail ? <span>{detail}</span> : null}
+              </div>
+            ))}
+          </div>
+        );
+      })}
 
       <div className="ttd-note">
         <strong>Before you go: park reservations</strong>
