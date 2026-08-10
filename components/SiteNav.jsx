@@ -7,6 +7,7 @@ const LINKS = [
   ['/', 'Home'],
   ['/things-to-do', 'Things to Do'],
   ['/about', 'Your Hosts'],
+  ['/#contact', 'Contact'],
 ];
 
 export default function SiteNav() {
@@ -38,6 +39,9 @@ export default function SiteNav() {
           }
           .nav-links[data-open="1"] { display: flex; }
           .nav-links a { padding: 15px 20px; font-size: 12px; }
+        }
+        @media (max-width: 900px) and (min-width: 768px) {
+          .nav-links { gap: 20px; }
         }
       `}</style>
 
