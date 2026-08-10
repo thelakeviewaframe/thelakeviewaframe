@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -100,7 +100,7 @@ export default function ThingsToDoPage() {
       <SiteNav />
 
       <h1>Things to do and see</h1>
-      <p className="subtitle">Grand Lake, Colorado</p>
+      <p className="subtitle">Grand Lake &amp; Rocky Mountain National Park</p>
 
       <div className="ttd-carousel">
         <div className="ttd-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
