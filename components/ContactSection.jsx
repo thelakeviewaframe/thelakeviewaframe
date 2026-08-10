@@ -33,8 +33,9 @@ export default function ContactSection() {
   }
 
   return (
-    <div className="section">
+    <div className="section" id="contact">
       <style>{`
+        #contact { scroll-margin-top: 24px; }
         .contact-box {
           background: #fff;
           border: 1px solid rgba(187,142,101,0.18);
@@ -165,11 +166,7 @@ export default function ContactSection() {
 
         <div className="contact-lines">
           <div className="contact-line">
-            <b>Email</b>
-            <a href="mailto:jkrealestate221@gmail.com">jkrealestate221@gmail.com</a>
-          </div>
-          <div className="contact-line">
-            <b>Phone</b>
+            <b>Prefer to call?</b>
             <a href="tel:+13057332664">(305) 733-2664</a>
           </div>
         </div>
