@@ -5,6 +5,7 @@ import Link from 'next/link';
 import BookingCard from '../components/BookingCard';
 import SiteNav from '../components/SiteNav';
 import PropertyVideo from '../components/PropertyVideo';
+import ContactSection from '../components/ContactSection';
 import { PROPERTY, REVIEWS } from '../lib/content';
 
 function Stars() {
@@ -276,6 +277,8 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
+
+          <ContactSection />
         </div>
 
         <BookingCard
