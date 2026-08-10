@@ -101,11 +101,15 @@ export default function HomePage() {
         }
 
         .facts {
-          display: flex; flex-wrap: wrap; gap: 0; margin: 0 0 34px; padding: 20px 0;
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 22px 24px; margin: 0 0 34px; padding: 22px 0;
           list-style: none; border-top: 1px solid rgba(187,142,101,0.22);
           border-bottom: 1px solid rgba(187,142,101,0.22);
         }
-        .facts li { flex: 1 1 auto; min-width: 120px; padding-right: 24px; font-size: 15px; }
+        .facts li { font-size: 15px; line-height: 1.4; }
+        @media (max-width: 767px) {
+          .facts { grid-template-columns: 1fr 1fr; gap: 20px 18px; }
+        }
         .facts b {
           display: block; font-size: 10.5px; text-transform: uppercase;
           letter-spacing: .13em; color: #bb8e65; font-weight: 600; margin-bottom: 3px;
