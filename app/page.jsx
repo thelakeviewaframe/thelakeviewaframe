@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -101,8 +101,8 @@ export default function HomePage() {
         }
 
         .facts {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 22px 24px; margin: 0 0 34px; padding: 22px 0;
+          display: grid; grid-template-columns: repeat(2, minmax(0, 240px));
+          gap: 22px 40px; margin: 0 0 34px; padding: 22px 0;
           list-style: none; border-top: 1px solid rgba(187,142,101,0.22);
           border-bottom: 1px solid rgba(187,142,101,0.22);
         }
