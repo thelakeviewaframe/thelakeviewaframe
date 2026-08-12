@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 
 export default function ContactSection() {
@@ -171,13 +170,7 @@ export default function ContactSection() {
           </div>
           <div className="contact-line">
             <b>Follow along</b>
-            
-              href="https://www.instagram.com/thelakeviewaframe/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              @thelakeviewaframe
-            </a>
+            <a href="https://www.instagram.com/thelakeviewaframe/" target="_blank" rel="noopener noreferrer">@thelakeviewaframe</a>
           </div>
         </div>
       </div>
