@@ -169,6 +169,16 @@ export default function ContactSection() {
             <b>Prefer to call?</b>
             <a href="tel:+13057332664">(305) 733-2664</a>
           </div>
+          <div className="contact-line">
+            <b>Follow along</b>
+            
+              href="https://www.instagram.com/thelakeviewaframe/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              @thelakeviewaframe
+            </a>
+          </div>
         </div>
       </div>
     </div>
