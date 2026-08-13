@@ -12,6 +12,9 @@ const BOOKING_URL = 'https://www.booking.com/hotel/us/luxury-a-frame-with-hot-tu
 export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, propertyName }) {
   const [blockedDates, setBlockedDates] = useState([]);
   const [range, setRange] = useState({ start: null, end: null });
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -33,9 +36,64 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
     { name: 'Booking.com', url: BOOKING_URL },
   ].filter((p) => p.url && !p.url.startsWith('PEGA_AQUI'));
 
+  const canSubmit = nights > 0 && guestName.trim() && guestEmail.trim() && !submitting;
+
+  async function handleRequest() {
+    setError('');
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkIn: range.start,
+          checkOut: range.end,
+          guestName: guestName.trim(),
+          guestEmail: guestEmail.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Something went wrong. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      setError('Could not reach the server. Please try again.');
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="booking-card">
       <style>{`
+        .guest-fields { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+        .guest-fields label {
+          font-size: 11.5px; font-weight: 600; letter-spacing: .12em;
+          text-transform: uppercase; color: #8a8a8a; margin-bottom: 4px; display: block;
+        }
+        /* Scoped on purpose: a global input rule broke the calendar grid before. */
+        .guest-fields input[type="text"],
+        .guest-fields input[type="email"] {
+          width: 100%; box-sizing: border-box;
+          padding: 11px 12px; font-size: 14px; color: #3d3d3d;
+          border: 1px solid rgba(187,142,101,0.4); border-radius: 2px;
+          background: #fff; font-family: inherit;
+        }
+        .guest-fields input:focus { outline: none; border-color: #bb8e65; }
+        .request-btn {
+          width: 100%; box-sizing: border-box; margin-top: 16px;
+          padding: 14px 16px; border: none; border-radius: 2px;
+          background: #bb8e65; color: #fff; cursor: pointer;
+          font-size: 11.5px; font-weight: 600;
+          letter-spacing: .14em; text-transform: uppercase;
+          font-family: inherit; transition: opacity .2s;
+        }
+        .request-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .hold-note {
+          margin: 12px 0 0; font-size: 12.5px; line-height: 1.6; color: #7a7a7a;
+        }
         .ota-block {
           margin-top: 22px; padding-top: 22px;
           border-top: 1px solid rgba(187,142,101,0.28);
@@ -82,11 +140,43 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
         </div>
       )}
 
+      <div className="guest-fields">
+        <div>
+          <label htmlFor="guest-name">Name</label>
+          <input
+            id="guest-name"
+            type="text"
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            placeholder="Your full name"
+          />
+        </div>
+        <div>
+          <label htmlFor="guest-email">Email</label>
+          <input
+            id="guest-email"
+            type="email"
+            value={guestEmail}
+            onChange={(e) => setGuestEmail(e.target.value)}
+            placeholder="you@example.com"
+          />
+        </div>
+      </div>
+
+      <button className="request-btn" onClick={handleRequest} disabled={!canSubmit}>
+        {submitting ? 'One moment…' : 'Request to book'}
+      </button>
+
+      <p className="hold-note">
+        Your card is held, not charged. We confirm every request within 24 hours,
+        and you&apos;re only charged once we do.
+      </p>
+
       {error && <div className="error-text">{error}</div>}
 
       <div className="ota-block">
-        <h4>Online booking is coming soon</h4>
-        <p>We&apos;re currently taking reservations through Airbnb, Vrbo and Booking.com.</p>
+        <h4>Prefer to book elsewhere?</h4>
+        <p>You can also find us on Airbnb, Vrbo and Booking.com.</p>
         {platforms.length > 0 ? (
           <div className="ota-links">
             {platforms.map((p) => (
