@@ -11,10 +11,15 @@ function toKey(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-// A hand-rolled month grid — no calendar library dependency.
-// Click a start date, then an end date, to select a range. Blocked nights
-// (from Airbnb/VRBO iCal sync + existing direct bookings) can't be picked.
-export default function Calendar({ blockedDates, range, onRangeChange }) {
+// Rejilla de mes hecha a mano, sin librería de calendario.
+// Clic en la fecha de llegada, luego en la de salida. Las noches ocupadas
+// (de la sincronización con Airbnb/Vrbo más las reservas directas) no se
+// pueden escoger.
+//
+// pricing es opcional: viene de /api/availability y trae el precio de cada
+// noche. Si no llega (por ejemplo si la tarea diaria falló), el calendario
+// funciona igual, nada más sin mostrar precios.
+export default function Calendar({ blockedDates, range, onRangeChange, pricing = {} }) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -35,7 +40,7 @@ export default function Calendar({ blockedDates, range, onRangeChange }) {
       onRangeChange({ start: key, end: null });
     } else {
       if (key > range.start) {
-        // Reject if any night in between is blocked
+        // Rechaza si alguna noche intermedia está ocupada
         const start = new Date(range.start + 'T00:00:00');
         const end = new Date(key + 'T00:00:00');
         let blocked = false;
@@ -72,6 +77,19 @@ export default function Calendar({ blockedDates, range, onRangeChange }) {
 
   return (
     <div className="calendar">
+      <style>{`
+        .cal-day-price {
+          display: block;
+          font-size: 9.5px;
+          line-height: 1.1;
+          margin-top: 2px;
+          color: #9a9a9a;
+          font-variant-numeric: tabular-nums;
+        }
+        .cal-day.selected .cal-day-price,
+        .cal-day.in-range .cal-day-price { color: inherit; opacity: .85; }
+        .cal-day.blocked .cal-day-price { visibility: hidden; }
+      `}</style>
       <div className="cal-header">
         <button type="button" className="cal-nav-btn" onClick={prevMonth}>&larr;</button>
         <span>{MONTH_NAMES[viewMonth]} {viewYear}</span>
@@ -85,6 +103,7 @@ export default function Calendar({ blockedDates, range, onRangeChange }) {
           const blocked = blockedSet.has(key) || isPast(viewYear, viewMonth, d);
           const isSelected = key === range.start || key === range.end;
           const inRange = range.start && range.end && key > range.start && key < range.end;
+          const night = pricing[key];
           return (
             <div
               key={i}
@@ -92,6 +111,9 @@ export default function Calendar({ blockedDates, range, onRangeChange }) {
               onClick={() => handleClick(viewYear, viewMonth, d)}
             >
               {d}
+              {night && !blocked && (
+                <span className="cal-day-price">${Math.round(night.price)}</span>
+              )}
             </div>
           );
         })}
