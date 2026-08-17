@@ -78,8 +78,20 @@ export default function Calendar({ blockedDates, range, onRangeChange, pricing =
   return (
     <div className="calendar">
       <style>{`
+        /* El estilo global acomoda el contenido de la celda en fila, así que
+           el precio salía pegado al número. Aquí forzamos columna: número
+           arriba, precio abajo. */
+        .cal-grid .cal-day {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          line-height: 1.1;
+        }
         .cal-day-price {
           display: block;
+          width: 100%;
+          text-align: center;
           font-size: 9.5px;
           line-height: 1.1;
           margin-top: 2px;
