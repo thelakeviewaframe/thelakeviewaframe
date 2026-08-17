@@ -11,6 +11,7 @@ const BOOKING_URL = 'https://www.booking.com/hotel/us/luxury-a-frame-with-hot-tu
 
 export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, propertyName }) {
   const [blockedDates, setBlockedDates] = useState([]);
+  const [pricing, setPricing] = useState({});
   const [range, setRange] = useState({ start: null, end: null });
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -20,15 +21,50 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
   useEffect(() => {
     fetch('/api/availability')
       .then((r) => r.json())
-      .then((data) => setBlockedDates(data.blockedDates || []))
+      .then((data) => {
+        setBlockedDates(data.blockedDates || []);
+        setPricing(data.pricing || {});
+      })
       .catch(() => setError('Could not load availability — try refreshing.'));
   }, []);
 
-  const nights = range.start && range.end
-    ? Math.round((new Date(range.end) - new Date(range.start)) / 86400000)
-    : 0;
-  const total = nights > 0 ? nights * nightlyRate + cleaningFee : 0;
+  // Noches del rango. La fecha de salida no cuenta: no se duerme esa noche.
+  const nightKeys = [];
+  if (range.start && range.end) {
+    const cursor = new Date(range.start + 'T00:00:00Z');
+    const end = new Date(range.end + 'T00:00:00Z');
+    while (cursor < end) {
+      nightKeys.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+  }
+  const nights = nightKeys.length;
+
+  // Si tenemos precio de todas las noches usamos esos. Si falta alguno,
+  // caemos a la tarifa fija para no mostrar un total incompleto. El servidor
+  // recalcula todo antes de cobrar, así que esto es solo lo que ve el huésped.
+  const havePricesForAll = nights > 0 && nightKeys.every((k) => pricing[k]);
+  const nightsSubtotal = havePricesForAll
+    ? nightKeys.reduce((sum, k) => sum + pricing[k].price, 0)
+    : nights * nightlyRate;
+
+  const total = nights > 0 ? Math.round(nightsSubtotal + cleaningFee) : 0;
   const dueNow = Math.round((total * depositPercent) / 100);
+  const avgNight = nights > 0 ? Math.round(nightsSubtotal / nights) : 0;
+
+  // Reglas de estancia, las mismas que rigen en las OTAs.
+  const arrival = range.start ? pricing[range.start] : null;
+  const departure = range.end ? pricing[range.end] : null;
+  const minStay = arrival?.minStay || 0;
+
+  let ruleWarning = '';
+  if (range.start && arrival && arrival.checkIn === false) {
+    ruleWarning = 'We are not able to start a stay on that date — please pick another arrival day.';
+  } else if (range.end && departure && departure.checkOut === false) {
+    ruleWarning = 'We are not able to end a stay on that date — please pick another departure day.';
+  } else if (nights > 0 && minStay && nights < minStay) {
+    ruleWarning = `Those dates require a minimum stay of ${minStay} nights.`;
+  }
 
   const platforms = [
     { name: 'Airbnb', url: AIRBNB_URL },
@@ -36,7 +72,8 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
     { name: 'Booking.com', url: BOOKING_URL },
   ].filter((p) => p.url && !p.url.startsWith('PEGA_AQUI'));
 
-  const canSubmit = nights > 0 && guestName.trim() && guestEmail.trim() && !submitting;
+  const canSubmit =
+    nights > 0 && !ruleWarning && guestName.trim() && guestEmail.trim() && !submitting;
 
   async function handleRequest() {
     setError('');
@@ -73,7 +110,8 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           font-size: 11.5px; font-weight: 600; letter-spacing: .12em;
           text-transform: uppercase; color: #8a8a8a; margin-bottom: 4px; display: block;
         }
-        /* Scoped on purpose: a global input rule broke the calendar grid before. */
+        /* Acotado a proposito: una regla global de input rompio la rejilla
+           del calendario antes. */
         .guest-fields input[type="text"],
         .guest-fields input[type="email"] {
           width: 100%; box-sizing: border-box;
@@ -93,6 +131,17 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
         .request-btn:disabled { opacity: .45; cursor: not-allowed; }
         .hold-note {
           margin: 12px 0 0; font-size: 12.5px; line-height: 1.6; color: #7a7a7a;
+        }
+        .rule-note {
+          margin: 12px 0 0; padding: 10px 12px;
+          background: rgba(187,142,101,0.09);
+          border-left: 2px solid #bb8e65;
+          font-size: 12.5px; line-height: 1.55; color: #6d5540;
+        }
+        .rate-sub {
+          display: block; margin-top: 2px;
+          font-size: 12px; color: #9a9a9a; letter-spacing: 0;
+          text-transform: none; font-weight: 400;
         }
         .ota-block {
           margin-top: 22px; padding-top: 22px;
@@ -121,14 +170,24 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
       `}</style>
 
       <div className="rate">
-        ${nightlyRate}<span> / night</span>
+        ${nights > 0 ? avgNight : nightlyRate}<span> / night</span>
+        {nights > 0 && havePricesForAll && (
+          <span className="rate-sub">average for your dates</span>
+        )}
       </div>
 
-      <Calendar blockedDates={blockedDates} range={range} onRangeChange={setRange} />
+      <Calendar
+        blockedDates={blockedDates}
+        range={range}
+        onRangeChange={setRange}
+        pricing={pricing}
+      />
 
       {nights > 0 && (
         <div>
-          <div className="total-line"><span>{nights} night(s)</span><span>${nights * nightlyRate}</span></div>
+          <div className="total-line">
+            <span>{nights} night(s)</span><span>${Math.round(nightsSubtotal)}</span>
+          </div>
           <div className="total-line"><span>Cleaning fee</span><span>${cleaningFee}</span></div>
           {depositPercent < 100 && (
             <div className="total-line"><span>Total</span><span>${total}</span></div>
@@ -139,6 +198,8 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           </div>
         </div>
       )}
+
+      {ruleWarning && <div className="rule-note">{ruleWarning}</div>}
 
       <div className="guest-fields">
         <div>
