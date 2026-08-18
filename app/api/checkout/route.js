@@ -29,6 +29,21 @@ export async function POST(request) {
     return Response.json({ error: 'Check-out must be after check-in' }, { status: 400 });
   }
 
+  // Ventana de reserva anticipada. El navegador ya apaga estas fechas en el
+  // calendario, pero se revisa otra vez aquí: lo que valida el navegador se
+  // puede saltar, lo que valida el servidor no.
+  const windowMonths = Number(process.env.BOOKING_WINDOW_MONTHS || 12);
+  const windowEnd = new Date();
+  windowEnd.setMonth(windowEnd.getMonth() + windowMonths);
+  if (checkOut > windowEnd.toISOString().slice(0, 10)) {
+    return Response.json(
+      {
+        error: `We take bookings up to ${windowMonths} months ahead. Please choose earlier dates, or contact us directly for a longer lead time.`,
+      },
+      { status: 409 }
+    );
+  }
+
   const supabase = getSupabaseServer();
 
   // Guarda contra doble reserva: si alguna noche del rango ya está apartada.
