@@ -3,21 +3,28 @@ import { getSupabaseServer } from '../../../../lib/supabaseClient';
 export const dynamic = 'force-dynamic';
 
 // GET /api/pricing/sync
-// Trae los precios de PriceLabs y los guarda en daily_prices.
-// Corre una vez al día por cron (ver vercel.json). PriceLabs recalcula
-// cada 24 horas, así que no tiene sentido pedirlos más seguido.
+// Una sola llamada a PriceLabs que trae dos cosas:
+//   1. Precios y mínimos de noches  -> daily_prices
+//   2. Disponibilidad de Booking.com -> blocked_dates (source 'bcom')
 //
-// El sitio NUNCA le pregunta a PriceLabs en el momento de reservar: si su
-// servidor tarda o falla, se caería el checkout. Por eso guardamos aquí y
-// el sitio lee de su propia base de datos.
+// Corre una vez al día por cron (ver vercel.json). PriceLabs recalcula cada
+// 24 horas, así que no tiene sentido pedirlo más seguido.
+//
+// El sitio NUNCA le pregunta a PriceLabs mientras alguien reserva: si su
+// servidor tarda o falla, se caería el checkout. Por eso guardamos aquí y el
+// sitio lee de su propia base de datos.
 
 // Los tres listings de la A-Frame comparten precio (mismo grupo en
-// PriceLabs), así que basta con preguntar por uno. Usamos el de Airbnb.
-const LISTING_ID = process.env.PRICELABS_LISTING_ID || '1675528160694917343';
-const LISTING_PMS = process.env.PRICELABS_PMS || 'airbnb';
+// PriceLabs), así que los precios se piden una sola vez, desde Airbnb.
+const PRICE_LISTING_ID = process.env.PRICELABS_LISTING_ID || '1675528160694917343';
+const PRICE_LISTING_PMS = process.env.PRICELABS_PMS || 'airbnb';
 
-// Cuántos días hacia adelante traer. 18 meses cubre de sobra la ventana
-// de reserva de las OTAs.
+// Booking.com nunca compartió su calendario con el sitio: era el único hueco
+// real de disponibilidad que quedaba. PriceLabs sí conoce esa disponibilidad,
+// y aquí la traemos para taparlo.
+const BCOM_LISTING_ID = process.env.PRICELABS_BCOM_LISTING_ID || '17034590___1703459001';
+const BCOM_LISTING_PMS = 'bcom';
+
 const DAYS_AHEAD = 550;
 
 function toISODate(d) {
@@ -25,7 +32,6 @@ function toISODate(d) {
 }
 
 export async function GET(request) {
-  // Mismo esquema de protección que /api/ical/sync.
   const authHeader = request.headers.get('authorization');
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 });
@@ -39,6 +45,8 @@ export async function GET(request) {
   const today = new Date();
   const end = new Date(today);
   end.setUTCDate(end.getUTCDate() + DAYS_AHEAD);
+  const dateFrom = toISODate(today);
+  const dateTo = toISODate(end);
 
   let payload;
   try {
@@ -53,15 +61,8 @@ export async function GET(request) {
       cache: 'no-store',
       body: JSON.stringify({
         listings: [
-          {
-            id: LISTING_ID,
-            pms: LISTING_PMS,
-            dateFrom: toISODate(today),
-            dateTo: toISODate(end),
-            // reason trae el desglose de por qué ese precio. No lo
-            // necesitamos y hace la respuesta enorme, así que va apagado.
-            reason: false,
-          },
+          { id: PRICE_LISTING_ID, pms: PRICE_LISTING_PMS, dateFrom, dateTo, reason: false },
+          { id: BCOM_LISTING_ID, pms: BCOM_LISTING_PMS, dateFrom, dateTo, reason: false },
         ],
       }),
     });
@@ -78,40 +79,81 @@ export async function GET(request) {
     return Response.json({ error: 'Could not reach PriceLabs' }, { status: 502 });
   }
 
-  const days = payload?.[0]?.data;
-  if (!Array.isArray(days) || days.length === 0) {
+  if (!Array.isArray(payload)) {
+    return Response.json({ error: 'Unexpected response from PriceLabs' }, { status: 502 });
+  }
+
+  const supabase = getSupabaseServer();
+  const result = {};
+
+  // ---------- 1. Precios ----------
+  const priceEntry = payload.find((e) => e?.id === PRICE_LISTING_ID);
+  const priceDays = priceEntry?.data;
+
+  if (!Array.isArray(priceDays) || priceDays.length === 0) {
     return Response.json({ error: 'PriceLabs returned no pricing data' }, { status: 502 });
   }
 
-  const rows = days
+  const priceRows = priceDays
     .filter((d) => d?.date && typeof d.price === 'number' && d.price > 0)
     .map((d) => ({
       date: d.date,
       price_cents: Math.round(d.price * 100),
       min_stay: typeof d.min_stay === 'number' && d.min_stay > 0 ? d.min_stay : 2,
-      // check_in / check_out vienen como booleanos. Si faltaran, lo seguro
-      // es permitir: bloquear por accidente cuesta reservas.
+      // Si estos campos faltaran, lo seguro es permitir: bloquear por error
+      // cuesta reservas.
       check_in_allowed: d.check_in !== false,
       check_out_allowed: d.check_out !== false,
       synced_at: new Date().toISOString(),
     }));
 
-  if (rows.length === 0) {
-    return Response.json({ error: 'No usable rows in PriceLabs response' }, { status: 502 });
+  if (priceRows.length === 0) {
+    return Response.json({ error: 'No usable pricing rows' }, { status: 502 });
   }
 
-  const supabase = getSupabaseServer();
-  const { error } = await supabase.from('daily_prices').upsert(rows, { onConflict: 'date' });
+  const { error: priceError } = await supabase
+    .from('daily_prices')
+    .upsert(priceRows, { onConflict: 'date' });
 
-  if (error) {
-    console.error('daily_prices upsert failed:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+  if (priceError) {
+    console.error('daily_prices upsert failed:', priceError);
+    return Response.json({ error: priceError.message }, { status: 500 });
   }
 
-  return Response.json({
+  result.prices = {
     ok: true,
-    daysStored: rows.length,
-    from: rows[0].date,
-    to: rows[rows.length - 1].date,
-  });
+    days: priceRows.length,
+    from: priceRows[0].date,
+    to: priceRows[priceRows.length - 1].date,
+  };
+
+  // ---------- 2. Disponibilidad de Booking.com ----------
+  // Un fallo aquí no debe tumbar la actualización de precios, que ya se
+  // guardó arriba. Si Booking.com no responde, el sitio se queda con la
+  // disponibilidad de la corrida anterior en vez de quedarse sin ninguna.
+  const bcomEntry = payload.find((e) => e?.id === BCOM_LISTING_ID);
+  const bcomDays = bcomEntry?.data;
+
+  if (Array.isArray(bcomDays) && bcomDays.length > 0) {
+    const occupied = bcomDays
+      .filter((d) => d?.date && (d.occupancy === 1 || d.unbookable === 1))
+      .map((d) => ({ date: d.date, source: 'bcom' }));
+
+    try {
+      // Reemplazo completo de esta fuente, igual que hace /api/ical/sync con
+      // airbnb y vrbo. Cada fuente solo toca sus propias filas.
+      await supabase.from('blocked_dates').delete().eq('source', 'bcom');
+      if (occupied.length) {
+        await supabase.from('blocked_dates').insert(occupied);
+      }
+      result.bookingDotCom = { ok: true, blockedNights: occupied.length };
+    } catch (err) {
+      console.error('bcom blocked_dates write failed:', err);
+      result.bookingDotCom = { ok: false, error: err.message };
+    }
+  } else {
+    result.bookingDotCom = { ok: false, error: 'No availability data returned' };
+  }
+
+  return Response.json({ ok: true, ...result });
 }
