@@ -7,6 +7,9 @@ import Calendar from './Calendar';
 const AIRBNB_URL = 'https://www.airbnb.com/rooms/1675528160694917343';
 const VRBO_URL = 'https://www.vrbo.com/5324402';
 const BOOKING_URL = 'https://www.booking.com/hotel/us/luxury-a-frame-with-hot-tub-in-moose-country';
+
+// Cuántos meses hacia adelante se puede reservar.
+const BOOKING_WINDOW_MONTHS = 12;
 // ───────────────────────────────────────────────────────
 
 export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, propertyName }) {
@@ -36,6 +39,15 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
       })
       .catch(() => setError('Could not load availability — try refreshing.'));
   }, []);
+
+  // Ventana de reserva anticipada: 12 meses móviles desde hoy, igual que
+  // abren las OTAs. Se recorre sola cada día, así nadie tiene que acordarse
+  // de moverla. El servidor vuelve a validarlo antes de cobrar.
+  const windowEnd = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + BOOKING_WINDOW_MONTHS);
+    return d.toISOString().slice(0, 10);
+  })();
 
   // Noches del rango. La fecha de salida no cuenta: no se duerme esa noche.
   const nightKeys = [];
@@ -144,6 +156,7 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
         .hold-note {
           margin: 12px 0 0; font-size: 12.5px; line-height: 1.6; color: #7a7a7a;
         }
+        .window-note { color: #9a9a9a; font-size: 12px; }
         .rule-note {
           margin: 12px 0 0; padding: 10px 12px;
           background: rgba(187,142,101,0.09);
@@ -204,6 +217,7 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
         range={range}
         onRangeChange={setRange}
         pricing={pricing}
+        maxDate={windowEnd}
       />
 
       {nights > 0 && (
@@ -256,6 +270,11 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
       <button className="request-btn" onClick={handleRequest} disabled={!canSubmit}>
         {submitting ? 'One moment…' : 'Request to book'}
       </button>
+
+      <p className="hold-note window-note">
+        We take bookings up to {BOOKING_WINDOW_MONTHS} months ahead. Dates beyond
+        that aren&apos;t open yet &mdash; they&apos;re not booked.
+      </p>
 
       <p className="hold-note">
         Your card is held, not charged. We confirm every request within 24 hours,
