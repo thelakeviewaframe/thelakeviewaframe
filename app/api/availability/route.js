@@ -3,15 +3,14 @@ import { getSupabaseServer } from '../../../lib/supabaseClient';
 export const dynamic = 'force-dynamic';
 
 // GET /api/availability
-//   -> { blockedDates: ["2026-08-01", ...],
-//        pricing: { "2026-12-25": { price, minStay, checkIn, checkOut }, ... } }
+//   -> { blockedDates: [...], pricing: {...}, cleaningFee, depositPercent }
 //
-// El calendario usa blockedDates para apagar noches ocupadas, y pricing para
-// mostrar el precio de cada noche.
-//
-// pricing sale de daily_prices, que llena /api/pricing/sync una vez al día
-// desde PriceLabs. Si esa tarea falla, este endpoint devuelve pricing vacío
-// y el sitio cae de vuelta a la tarifa fija — feo, pero no se rompe.
+// Este endpoint corre en el servidor, y por eso es el único lugar donde se
+// pueden leer variables como CLEANING_FEE_USD. En un componente de navegador
+// process.env solo funciona con nombres que empiezan con NEXT_PUBLIC_, así
+// que ahí esas variables salen vacías y el sitio cae a sus valores de
+// respaldo -- que fue exactamente por qué la limpieza se quedaba en $150 por
+// más que se cambiara en Vercel.
 export async function GET() {
   const supabase = getSupabaseServer();
 
@@ -44,5 +43,12 @@ export async function GET() {
     console.error('daily_prices read failed:', pricesRes.error);
   }
 
-  return Response.json({ blockedDates, pricing });
+  return Response.json({
+    blockedDates,
+    pricing,
+    // Mismos valores que usa /api/checkout para cobrar. Salen de aquí para
+    // que lo que ve el huésped y lo que se le cobra no puedan separarse.
+    cleaningFee: Number(process.env.CLEANING_FEE_USD || 200),
+    depositPercent: Number(process.env.DEPOSIT_PERCENT || 100),
+  });
 }
