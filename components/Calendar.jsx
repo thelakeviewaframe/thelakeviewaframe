@@ -19,17 +19,24 @@ function toKey(y, m, d) {
 // pricing es opcional: viene de /api/availability y trae el precio de cada
 // noche. Si no llega (por ejemplo si la tarea diaria falló), el calendario
 // funciona igual, nada más sin mostrar precios.
-export default function Calendar({ blockedDates, range, onRangeChange, pricing = {} }) {
+export default function Calendar({ blockedDates, range, onRangeChange, pricing = {}, maxDate = null }) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const blockedSet = new Set(blockedDates);
 
+  // Fuera de ventana = pasado, o más allá del límite de reserva anticipada.
+  // maxDate viene como 'YYYY-MM-DD'; las OTAs abren 12 meses y el sitio
+  // directo hace lo mismo, para no vender fechas cuyo precio PriceLabs
+  // todavía calcula con muy poca información.
   function isPast(y, m, d) {
+    const key = toKey(y, m, d);
     const date = new Date(y, m, d);
     const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return date < t;
+    if (date < t) return true;
+    if (maxDate && key > maxDate) return true;
+    return false;
   }
 
   function handleClick(y, m, d) {
