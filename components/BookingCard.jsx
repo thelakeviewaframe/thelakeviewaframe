@@ -12,6 +12,11 @@ const BOOKING_URL = 'https://www.booking.com/hotel/us/luxury-a-frame-with-hot-tu
 export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, propertyName }) {
   const [blockedDates, setBlockedDates] = useState([]);
   const [pricing, setPricing] = useState({});
+  // Las tarifas llegan del servidor, no de las props. Las props se calculan
+  // en el navegador, donde process.env.CLEANING_FEE_USD siempre sale vacío
+  // (Next.js solo expone las que empiezan con NEXT_PUBLIC_), así que
+  // llegaban con los valores de respaldo del código en vez de los reales.
+  const [fees, setFees] = useState(null);
   const [range, setRange] = useState({ start: null, end: null });
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -24,6 +29,10 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
       .then((data) => {
         setBlockedDates(data.blockedDates || []);
         setPricing(data.pricing || {});
+        setFees({
+          cleaningFee: data.cleaningFee,
+          depositPercent: data.depositPercent,
+        });
       })
       .catch(() => setError('Could not load availability — try refreshing.'));
   }, []);
@@ -48,8 +57,11 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
     ? nightKeys.reduce((sum, k) => sum + pricing[k].price, 0)
     : nights * nightlyRate;
 
-  const total = nights > 0 ? Math.round(nightsSubtotal + cleaningFee) : 0;
-  const dueNow = Math.round((total * depositPercent) / 100);
+  const effectiveCleaningFee = fees?.cleaningFee ?? cleaningFee;
+  const effectiveDepositPercent = fees?.depositPercent ?? depositPercent;
+
+  const total = nights > 0 ? Math.round(nightsSubtotal + effectiveCleaningFee) : 0;
+  const dueNow = Math.round((total * effectiveDepositPercent) / 100);
   const avgNight = nights > 0 ? Math.round(nightsSubtotal / nights) : 0;
 
   // Reglas de estancia, las mismas que rigen en las OTAs.
@@ -138,6 +150,10 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           border-left: 2px solid #bb8e65;
           font-size: 12.5px; line-height: 1.55; color: #6d5540;
         }
+        .rate-empty {
+          font-size: 15px; font-weight: 400; color: #7a7a7a;
+          letter-spacing: 0; text-transform: none;
+        }
         .rate-sub {
           display: block; margin-top: 2px;
           font-size: 12px; color: #9a9a9a; letter-spacing: 0;
@@ -169,10 +185,17 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
         }
       `}</style>
 
+      {/* Sin fechas no hay un precio honesto que mostrar: cada noche vale
+          distinto. En vez de un número fijo que después no cuadra con el
+          total, invitamos a escoger fechas. */}
       <div className="rate">
-        ${nights > 0 ? avgNight : nightlyRate}<span> / night</span>
-        {nights > 0 && havePricesForAll && (
-          <span className="rate-sub">average for your dates</span>
+        {nights > 0 ? (
+          <>
+            ${avgNight}<span> / night</span>
+            {havePricesForAll && <span className="rate-sub">average for your dates</span>}
+          </>
+        ) : (
+          <span className="rate-empty">Select your dates for pricing</span>
         )}
       </div>
 
@@ -188,12 +211,18 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           <div className="total-line">
             <span>{nights} night(s)</span><span>${Math.round(nightsSubtotal)}</span>
           </div>
-          <div className="total-line"><span>Cleaning fee</span><span>${cleaningFee}</span></div>
-          {depositPercent < 100 && (
+          <div className="total-line">
+            <span>Cleaning fee</span><span>${effectiveCleaningFee}</span>
+          </div>
+          {effectiveDepositPercent < 100 && (
             <div className="total-line"><span>Total</span><span>${total}</span></div>
           )}
           <div className="total-line due">
-            <span>{depositPercent < 100 ? `Due now (${depositPercent}% deposit)` : 'Total'}</span>
+            <span>
+              {effectiveDepositPercent < 100
+                ? `Due now (${effectiveDepositPercent}% deposit)`
+                : 'Total'}
+            </span>
             <span>${dueNow}</span>
           </div>
         </div>
