@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -213,7 +213,7 @@ export default function HomePage() {
           <div className="section">
             <ul className="facts">
               {PROPERTY.quickFacts.map(([k, v]) => (
-                <li key={k}><b>{k}</b>{v}</li>
+                <li key={k}><b>{k}</b> {v}</li>
               ))}
             </ul>
             <h2>The Space</h2>
