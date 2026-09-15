@@ -1,6 +1,32 @@
 import Link from 'next/link';
 import SiteNav from '../../components/SiteNav';
 
+const PAGE_TITLE = 'Your Hosts';
+const PAGE_DESCRIPTION =
+  'Meet Koren and Jess, the hosts of the Lakeview A-Frame in Grand Lake, Colorado, near Rocky Mountain National Park. Book your stay directly with us.';
+
+export const metadata = {
+  title: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: '/about' },
+  openGraph: {
+    title: 'Your Hosts | Lakeview A-Frame, Grand Lake, CO',
+    description: PAGE_DESCRIPTION,
+    url: '/about',
+    siteName: 'Lakeview A-Frame',
+    type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/photos/hero-1.jpg',
+        width: 1448,
+        height: 965,
+        alt: 'Lakeview A-Frame cabin in Grand Lake, Colorado',
+      },
+    ],
+  },
+};
+
 export default function AboutPage() {
   return (
     <main className="container">
@@ -47,7 +73,7 @@ export default function AboutPage() {
 
         <p>
           Please make yourself at home and enjoy your stay. Thank you for choosing to stay with
-          us — we truly appreciate it and hope to welcome you back again soon. And if you have
+          us. We truly appreciate it and hope to welcome you back again soon. And if you have
           questions about owning a mountain home or vacation property of your own, we&apos;d be
           happy to help however we can.
         </p>
