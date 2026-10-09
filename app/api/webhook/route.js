@@ -78,6 +78,13 @@ export async function POST(request) {
             html: `
               <p>New request from ${booking.guest_name} (${booking.guest_email})</p>
               <p>${booking.check_in} &rarr; ${booking.check_out} (${booking.nights} night(s)) -- $${amount}</p>
+              ${
+                booking.promo_code
+                  ? `<p>Discount code used: <strong>${booking.promo_code}</strong> (saved $${(
+                      (booking.discount_cents || 0) / 100
+                    ).toFixed(2)} on the nightly rate). The total above already includes it.</p>`
+                  : ''
+              }
               <p>The card is authorized, not charged yet. Choose one:</p>
               <p>
                 <a href="${approveUrl}" style="display:inline-block;padding:10px 20px;background:#2e7d32;color:#fff;text-decoration:none;border-radius:4px;margin-right:10px;">Approve</a>
