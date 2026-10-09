@@ -3,28 +3,34 @@
 import { useEffect, useState } from 'react';
 import Calendar from './Calendar';
 
-// Enlaces a los listados en las plataformas.
+// Links to the listings on each platform.
 const AIRBNB_URL = 'https://www.airbnb.com/rooms/1675528160694917343';
 const VRBO_URL = 'https://www.vrbo.com/5324402';
 const BOOKING_URL = 'https://www.booking.com/hotel/us/luxury-a-frame-with-hot-tub-in-moose-country';
 
-// Cuántos meses hacia adelante se puede reservar.
+// How many months ahead guests can book.
 const BOOKING_WINDOW_MONTHS = 12;
 // ───────────────────────────────────────────────────────
 
 export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, propertyName }) {
   const [blockedDates, setBlockedDates] = useState([]);
   const [pricing, setPricing] = useState({});
-  // Las tarifas llegan del servidor, no de las props. Las props se calculan
-  // en el navegador, donde process.env.CLEANING_FEE_USD siempre sale vacío
-  // (Next.js solo expone las que empiezan con NEXT_PUBLIC_), así que
-  // llegaban con los valores de respaldo del código en vez de los reales.
+  // Fees come from the server, not from props. Props are computed in the
+  // browser, where process.env.CLEANING_FEE_USD is always empty (Next.js only
+  // exposes variables starting with NEXT_PUBLIC_), so they arrived with the
+  // code's fallback values instead of the real ones.
   const [fees, setFees] = useState(null);
   const [range, setRange] = useState({ start: null, end: null });
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Discount code. promo stores what the server answered; the final amount
+  // is recalculated by /api/checkout before charging.
+  const [promoInput, setPromoInput] = useState('');
+  const [promo, setPromo] = useState(null);
+  const [promoMessage, setPromoMessage] = useState('');
+  const [promoChecking, setPromoChecking] = useState(false);
 
   useEffect(() => {
     fetch('/api/availability')
@@ -37,19 +43,19 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           depositPercent: data.depositPercent,
         });
       })
-      .catch(() => setError('Could not load availability — try refreshing.'));
+      .catch(() => setError('Could not load availability. Please try refreshing.'));
   }, []);
 
-  // Ventana de reserva anticipada: 12 meses móviles desde hoy, igual que
-  // abren las OTAs. Se recorre sola cada día, así nadie tiene que acordarse
-  // de moverla. El servidor vuelve a validarlo antes de cobrar.
+  // Booking window: a rolling 12 months from today, same as the OTAs. It
+  // moves forward on its own every day, so nobody has to remember to update
+  // it. The server checks it again before charging.
   const windowEnd = (() => {
     const d = new Date();
     d.setMonth(d.getMonth() + BOOKING_WINDOW_MONTHS);
     return d.toISOString().slice(0, 10);
   })();
 
-  // Noches del rango. La fecha de salida no cuenta: no se duerme esa noche.
+  // Nights in the range. The check-out date doesn't count: nobody sleeps that night.
   const nightKeys = [];
   if (range.start && range.end) {
     const cursor = new Date(range.start + 'T00:00:00Z');
@@ -61,31 +67,80 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
   }
   const nights = nightKeys.length;
 
-  // Si tenemos precio de todas las noches usamos esos. Si falta alguno,
-  // caemos a la tarifa fija para no mostrar un total incompleto. El servidor
-  // recalcula todo antes de cobrar, así que esto es solo lo que ve el huésped.
+  // If we have a price for every night we use those. If any is missing, we
+  // fall back to the flat rate so we never show an incomplete total. The
+  // server recalculates everything before charging, so this is display only.
   const havePricesForAll = nights > 0 && nightKeys.every((k) => pricing[k]);
   const nightsSubtotal = havePricesForAll
     ? nightKeys.reduce((sum, k) => sum + pricing[k].price, 0)
     : nights * nightlyRate;
 
+  // Every time the dates change, the discount is checked again: a winter
+  // code can work in January and not in June.
+  useEffect(() => {
+    if (!promo) return;
+    if (!range.start || !range.end) {
+      setPromo(null);
+      setPromoMessage('');
+      return;
+    }
+    checkPromo(promo.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range.start, range.end]);
+
+  async function checkPromo(codeToCheck) {
+    const code = (codeToCheck || '').trim();
+    if (!code) return;
+    if (!range.start || !range.end) {
+      setPromoMessage('Please pick your dates first.');
+      return;
+    }
+    setPromoChecking(true);
+    try {
+      const res = await fetch('/api/promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, checkIn: range.start, checkOut: range.end }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPromo(data);
+      } else {
+        setPromo(null);
+      }
+      setPromoMessage(data.message || '');
+    } catch (err) {
+      setPromo(null);
+      setPromoMessage('We could not check that code right now. Please try again.');
+    }
+    setPromoChecking(false);
+  }
+
+  function removePromo() {
+    setPromo(null);
+    setPromoInput('');
+    setPromoMessage('');
+  }
+
+  const discount = promo ? promo.discountCents / 100 : 0;
+
   const effectiveCleaningFee = fees?.cleaningFee ?? cleaningFee;
   const effectiveDepositPercent = fees?.depositPercent ?? depositPercent;
 
-  const total = nights > 0 ? Math.round(nightsSubtotal + effectiveCleaningFee) : 0;
+  const total = nights > 0 ? Math.round(nightsSubtotal - discount + effectiveCleaningFee) : 0;
   const dueNow = Math.round((total * effectiveDepositPercent) / 100);
   const avgNight = nights > 0 ? Math.round(nightsSubtotal / nights) : 0;
 
-  // Reglas de estancia, las mismas que rigen en las OTAs.
+  // Stay rules, the same ones that apply on the OTAs.
   const arrival = range.start ? pricing[range.start] : null;
   const departure = range.end ? pricing[range.end] : null;
   const minStay = arrival?.minStay || 0;
 
   let ruleWarning = '';
   if (range.start && arrival && arrival.checkIn === false) {
-    ruleWarning = 'We are not able to start a stay on that date — please pick another arrival day.';
+    ruleWarning = 'We are not able to start a stay on that date. Please pick another arrival day.';
   } else if (range.end && departure && departure.checkOut === false) {
-    ruleWarning = 'We are not able to end a stay on that date — please pick another departure day.';
+    ruleWarning = 'We are not able to end a stay on that date. Please pick another departure day.';
   } else if (nights > 0 && minStay && nights < minStay) {
     ruleWarning = `Those dates require a minimum stay of ${minStay} nights.`;
   }
@@ -97,7 +152,7 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
   ].filter((p) => p.url && !p.url.startsWith('PEGA_AQUI'));
 
   const canSubmit =
-    nights > 0 && !ruleWarning && guestName.trim() && guestEmail.trim() && !submitting;
+    nights > 0 && !ruleWarning && guestName.trim() && guestEmail.trim() && !submitting && !promoChecking;
 
   async function handleRequest() {
     setError('');
@@ -111,6 +166,7 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           checkOut: range.end,
           guestName: guestName.trim(),
           guestEmail: guestEmail.trim(),
+          promoCode: promo ? promo.code : '',
         }),
       });
       const data = await res.json();
@@ -134,8 +190,8 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           font-size: 11.5px; font-weight: 600; letter-spacing: .12em;
           text-transform: uppercase; color: #8a8a8a; margin-bottom: 4px; display: block;
         }
-        /* Acotado a proposito: una regla global de input rompio la rejilla
-           del calendario antes. */
+        /* Scoped on purpose: a global input rule broke the calendar grid
+           before. */
         .guest-fields input[type="text"],
         .guest-fields input[type="email"] {
           width: 100%; box-sizing: border-box;
@@ -163,6 +219,37 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           border-left: 2px solid #bb8e65;
           font-size: 12.5px; line-height: 1.55; color: #6d5540;
         }
+        .promo-box { margin-top: 16px; }
+        .promo-box label {
+          font-size: 11.5px; font-weight: 600; letter-spacing: .12em;
+          text-transform: uppercase; color: #8a8a8a; margin-bottom: 4px; display: block;
+        }
+        .promo-row { display: flex; gap: 8px; }
+        .promo-row input[type="text"] {
+          flex: 1; min-width: 0; box-sizing: border-box;
+          padding: 11px 12px; font-size: 14px; color: #3d3d3d;
+          border: 1px solid rgba(187,142,101,0.4); border-radius: 2px;
+          background: #fff; font-family: inherit; letter-spacing: .06em;
+        }
+        .promo-row input:focus { outline: none; border-color: #bb8e65; }
+        .promo-apply {
+          padding: 0 16px; border: 1px solid #bb8e65; border-radius: 2px;
+          background: #fff; color: #bb8e65; cursor: pointer;
+          font-size: 11.5px; font-weight: 600; letter-spacing: .14em;
+          text-transform: uppercase; font-family: inherit;
+        }
+        .promo-apply:disabled { opacity: .45; cursor: not-allowed; }
+        .promo-applied {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 10px 12px; background: rgba(187,142,101,0.09);
+          border-left: 2px solid #bb8e65; font-size: 13.5px; color: #6d5540;
+        }
+        .promo-remove {
+          border: none; background: none; color: #8a8a8a; cursor: pointer;
+          font-size: 12.5px; text-decoration: underline; font-family: inherit;
+        }
+        .promo-msg { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: #a2564a; }
+        .promo-msg.ok { color: #6d7a55; }
         .rate-empty {
           font-size: 15px; font-weight: 400; color: #7a7a7a;
           letter-spacing: 0; text-transform: none;
@@ -198,9 +285,9 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
         }
       `}</style>
 
-      {/* Sin fechas no hay un precio honesto que mostrar: cada noche vale
-          distinto. En vez de un número fijo que después no cuadra con el
-          total, invitamos a escoger fechas. */}
+      {/* Without dates there's no honest price to show: every night costs
+          something different. Instead of a fixed number that later won't
+          match the total, we invite the guest to pick dates. */}
       <div className="rate">
         {nights > 0 ? (
           <>
@@ -225,6 +312,11 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
           <div className="total-line">
             <span>{nights} night(s)</span><span>${Math.round(nightsSubtotal)}</span>
           </div>
+          {promo && (
+            <div className="total-line promo-line">
+              <span>Discount ({promo.code})</span><span>-${Math.round(discount)}</span>
+            </div>
+          )}
           <div className="total-line">
             <span>Cleaning fee</span><span>${effectiveCleaningFee}</span>
           </div>
@@ -243,6 +335,40 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
       )}
 
       {ruleWarning && <div className="rule-note">{ruleWarning}</div>}
+
+      <div className="promo-box">
+        <label htmlFor="promo-code">Promo code</label>
+        {promo ? (
+          <div className="promo-applied">
+            <span>{promo.code} applied</span>
+            <button type="button" className="promo-remove" onClick={removePromo}>
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="promo-row">
+            <input
+              id="promo-code"
+              type="text"
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+              placeholder="Enter code"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="promo-apply"
+              onClick={() => checkPromo(promoInput)}
+              disabled={!promoInput.trim() || promoChecking}
+            >
+              {promoChecking ? 'Checking' : 'Apply'}
+            </button>
+          </div>
+        )}
+        {promoMessage && (
+          <p className={promo ? 'promo-msg ok' : 'promo-msg'}>{promoMessage}</p>
+        )}
+      </div>
 
       <div className="guest-fields">
         <div>
@@ -273,7 +399,7 @@ export default function BookingCard({ nightlyRate, cleaningFee, depositPercent, 
 
       <p className="hold-note window-note">
         We take bookings up to {BOOKING_WINDOW_MONTHS} months ahead. Dates beyond
-        that aren&apos;t open yet &mdash; they&apos;re not booked.
+        that aren&apos;t open yet, they&apos;re not booked.
       </p>
 
       <p className="hold-note">
