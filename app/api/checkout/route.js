@@ -1,22 +1,22 @@
 import Stripe from 'stripe';
 import { randomUUID } from 'crypto';
 import { getSupabaseServer } from '../../../lib/supabaseClient';
+import { evaluatePromo } from '../../../lib/promo';
 
-// POST /api/checkout  { checkIn, checkOut, guestName, guestEmail }
+// POST /api/checkout  { checkIn, checkOut, guestName, guestEmail, promoCode? }
 //
-// Crea una sesión de Stripe (tarjeta autorizada pero NO cobrada, ver
-// capture_method: 'manual') y una reserva 'pending'. Las fechas no se
-// bloquean aquí sino en el webhook, para que un checkout abandonado no
-// aparte noches.
+// Creates a Stripe session (card authorized but NOT charged, see
+// capture_method: 'manual') and a 'pending' booking. Dates are not blocked
+// here but in the webhook, so an abandoned checkout doesn't hold nights.
 //
-// El precio se calcula AQUÍ, en el servidor, sumando daily_prices noche por
-// noche. Nunca se confía en un total que venga del navegador: cualquiera
-// puede editar lo que manda su propio navegador, y aceptarlo sería dejar que
-// el huésped elija cuánto pagar.
+// The price is calculated HERE, on the server, adding up daily_prices night
+// by night. A total coming from the browser is never trusted: anyone can
+// edit what their own browser sends, and accepting it would let the guest
+// choose how much to pay.
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   const body = await request.json();
-  const { checkIn, checkOut, guestName, guestEmail } = body;
+  const { checkIn, checkOut, guestName, guestEmail, promoCode } = body;
 
   if (!checkIn || !checkOut || !guestName || !guestEmail) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -29,9 +29,9 @@ export async function POST(request) {
     return Response.json({ error: 'Check-out must be after check-in' }, { status: 400 });
   }
 
-  // Ventana de reserva anticipada. El navegador ya apaga estas fechas en el
-  // calendario, pero se revisa otra vez aquí: lo que valida el navegador se
-  // puede saltar, lo que valida el servidor no.
+  // Booking window. The browser already greys out these dates in the
+  // calendar, but it's checked again here: browser checks can be bypassed,
+  // server checks can't.
   const windowMonths = Number(process.env.BOOKING_WINDOW_MONTHS || 12);
   const windowEnd = new Date();
   windowEnd.setMonth(windowEnd.getMonth() + windowMonths);
@@ -46,7 +46,7 @@ export async function POST(request) {
 
   const supabase = getSupabaseServer();
 
-  // Guarda contra doble reserva: si alguna noche del rango ya está apartada.
+  // Double-booking guard: stop if any night in the range is already taken.
   const { data: blocked } = await supabase
     .from('blocked_dates')
     .select('date')
@@ -56,8 +56,8 @@ export async function POST(request) {
     return Response.json({ error: 'Those dates are no longer available' }, { status: 409 });
   }
 
-  // Traemos hasta checkOut INCLUSIVE: esa fecha no es una noche que se cobre,
-  // pero sí necesitamos saber si ese día se permite salir.
+  // Fetch up to checkOut INCLUSIVE: that date isn't a charged night, but we
+  // need to know whether check-out is allowed that day.
   const { data: priceRows, error: priceError } = await supabase
     .from('daily_prices')
     .select('date, price_cents, min_stay, check_in_allowed, check_out_allowed')
@@ -71,9 +71,9 @@ export async function POST(request) {
 
   const byDate = new Map((priceRows || []).map((r) => [r.date, r]));
 
-  // Si falta el precio de alguna noche, paramos. Inventar un precio o usar
-  // uno por defecto es peor que pedirle al huésped que escriba: un error de
-  // precio en temporada alta cuesta cientos de dólares por noche.
+  // If any night is missing a price, stop. Making up a price or using a
+  // default is worse than asking the guest to reach out: a pricing mistake in
+  // high season costs hundreds of dollars per night.
   const nightKeys = [];
   const cursor = new Date(checkIn + 'T00:00:00Z');
   const end = new Date(checkOut + 'T00:00:00Z');
@@ -94,9 +94,8 @@ export async function POST(request) {
   const arrival = byDate.get(checkIn);
   const departure = byDate.get(checkOut);
 
-  // Reglas de entrada y salida. Vienen de PriceLabs y son las mismas que
-  // rigen en Airbnb, Vrbo y Booking.com, así que el sitio directo no puede
-  // ser la puerta trasera que las evade.
+  // Check-in and check-out rules. They come from PriceLabs and match Airbnb,
+  // Vrbo and Booking.com, so the direct site can't be a back door around them.
   if (arrival && arrival.check_in_allowed === false) {
     return Response.json(
       { error: 'We are not able to start a stay on that date. Please pick another arrival day.' },
@@ -120,9 +119,27 @@ export async function POST(request) {
 
   const nightsSubtotalCents = nightKeys.reduce((sum, k) => sum + byDate.get(k).price_cents, 0);
   const cleaningFeeCents = Math.round(Number(process.env.CLEANING_FEE_USD || 200) * 100);
-  const totalCents = nightsSubtotalCents + cleaningFeeCents;
 
-  const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100); // 100 = pago completo
+  // Discount code: recalculated here even if the browser already showed it.
+  // It only lowers the nightly rate, never the cleaning fee. If the guest
+  // entered a code that doesn't work, we tell them instead of silently
+  // charging full price.
+  let promo = null;
+  if (promoCode && String(promoCode).trim()) {
+    promo = await evaluatePromo(
+      supabase,
+      promoCode,
+      nightKeys.map((k) => ({ date: k, price_cents: byDate.get(k).price_cents }))
+    );
+    if (!promo.ok) {
+      return Response.json({ error: promo.message }, { status: 409 });
+    }
+  }
+  const discountCents = promo ? promo.discountCents : 0;
+
+  const totalCents = nightsSubtotalCents - discountCents + cleaningFeeCents;
+
+  const depositPercent = Number(process.env.DEPOSIT_PERCENT || 100); // 100 = full payment
   const dueNowCents = Math.round((totalCents * depositPercent) / 100);
 
   const reviewToken = randomUUID();
@@ -136,6 +153,8 @@ export async function POST(request) {
       check_out: checkOut,
       nights,
       amount_total_cents: totalCents,
+      promo_code: promo ? promo.code : null,
+      discount_cents: discountCents,
       status: 'pending',
       review_token: reviewToken,
     })
@@ -150,8 +169,8 @@ export async function POST(request) {
     mode: 'payment',
     payment_method_types: ['card'],
     customer_email: guestEmail,
-    // Solo autoriza: el dinero se aparta pero no se cobra hasta que el
-    // anfitrión aprueba (o se libera si rechaza).
+    // Authorize only: the money is held but not charged until the host
+    // approves (or released if they decline).
     payment_intent_data: { capture_method: 'manual' },
     line_items: [
       {
@@ -161,15 +180,16 @@ export async function POST(request) {
           product_data: {
             name: `${process.env.NEXT_PUBLIC_PROPERTY_NAME || 'Booking'}: ${checkIn} to ${checkOut}`,
             description:
-              depositPercent < 100
+              (depositPercent < 100
                 ? `${depositPercent}% deposit, ${nights} night(s), balance due at check-in`
-                : `${nights} night(s) plus cleaning, full payment`,
+                : `${nights} night(s) plus cleaning, full payment`) +
+              (promo ? `. Includes ${promo.code} discount of $${(discountCents / 100).toFixed(2)}` : ''),
           },
         },
         quantity: 1,
       },
     ],
-    metadata: { booking_id: String(booking.id) },
+    metadata: { booking_id: String(booking.id), promo_code: promo ? promo.code : '' },
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/booking-confirmed?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/?checkout=cancelled`,
   });
